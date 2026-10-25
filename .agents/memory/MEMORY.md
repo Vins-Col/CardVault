@@ -1,1 +1,2 @@
 - [Expo DevTools warning](expo-devtools-warning.md) — missing GLib can stop the optional debugger shell while Metro and Expo preview still start.
+- [TCGdex number search](tcgdex-search.md) — collector-number queries with leading zeroes can return unpadded IDs; display the API's actual collector number.

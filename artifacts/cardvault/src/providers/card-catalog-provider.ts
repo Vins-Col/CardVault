@@ -1,7 +1,25 @@
 import type { Card } from "@/src/models/card";
 
+export type CardCatalogSearchField =
+  "name" | "collectorNumber" | "setName" | "setCode" | "rarity";
+
+export interface CardCatalogLanguage {
+  code: string;
+  label: string;
+}
+
+export interface CardCatalogSearchOptions {
+  field: CardCatalogSearchField;
+  catalogLanguage: string;
+  signal?: AbortSignal;
+}
+
 export interface CardCatalogProvider<TCard extends Card = Card> {
   readonly gameId: string;
-  searchCards(query: string): Promise<readonly TCard[]>;
-  getCard(externalId: string): Promise<TCard | null>;
+  getSupportedLanguages(): readonly CardCatalogLanguage[];
+  searchCards(
+    query: string,
+    options: CardCatalogSearchOptions,
+  ): Promise<readonly TCard[]>;
+  getCard(externalId: string, catalogLanguage?: string): Promise<TCard | null>;
 }

@@ -5,6 +5,7 @@ export interface CollectionItem {
   card: Card;
   quantity: number;
   condition: string;
+  /** Language printed on the physical copy owned by the user. */
   language: string;
   variant: string | null;
   purchasePrice: number | null;

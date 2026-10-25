@@ -6,6 +6,7 @@ export interface Card {
   setId: string;
   setName: string;
   collectorNumber: string;
+  /** Language used by the card catalog record, not the physical copy. */
   language: string;
   rarity: string | null;
   variant: string | null;
