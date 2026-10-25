@@ -1,0 +1,1 @@
+- [Expo DevTools warning](expo-devtools-warning.md) — missing GLib can stop the optional debugger shell while Metro and Expo preview still start.

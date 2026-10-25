@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/"
+title = "CardVault"
+description = "A modular native collectible card manager. The first module establishes navigation, shared card and collection models, and extension points for future card games and providers."
+version = "1.0.0"
+id = "artifacts/cardvault"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/" ]
+localPort = 25453
+
+[services.development]
+run = "pnpm --filter @workspace/cardvault run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/cardvault", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/cardvault", "run", "serve" ]
+
+[services.env]
+PORT = "25453"
+BASE_PATH = "/"
