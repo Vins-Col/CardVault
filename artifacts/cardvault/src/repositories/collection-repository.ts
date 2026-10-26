@@ -8,4 +8,7 @@ export interface CollectionRepository<
   add(item: TItem): Promise<TItem>;
   update(item: TItem): Promise<TItem>;
   remove(id: string): Promise<void>;
+  incrementQuantity(id: string, amount?: number): Promise<TItem>;
+  decrementQuantity(id: string, amount?: number): Promise<TItem>;
+  clearCollection(): Promise<void>;
 }

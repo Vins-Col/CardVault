@@ -7,6 +7,7 @@ import type { Card } from "@/src/models/card";
 interface CardInfoCardProps {
   card: Card;
   ownedLanguage?: string;
+  variant?: string | null;
   quantity?: number;
   condition?: string;
   actions?: ReactNode;
@@ -15,6 +16,7 @@ interface CardInfoCardProps {
 export default function CardInfoCard({
   card,
   ownedLanguage,
+  variant,
   quantity,
   condition,
   actions,
@@ -59,6 +61,11 @@ export default function CardInfoCard({
             <Text style={[styles.metadata, { color: colors.accent }]}>
               Owned language: {ownedLanguage}
               {quantity ? ` · Qty ${quantity}` : ""}
+            </Text>
+          ) : null}
+          {variant ? (
+            <Text style={[styles.metadata, { color: colors.mutedForeground }]}>
+              Variant: {variant}
             </Text>
           ) : null}
           {condition ? (

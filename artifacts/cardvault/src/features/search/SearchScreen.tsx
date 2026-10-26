@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Feather } from "@expo/vector-icons";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Keyboard,
   Platform,
@@ -19,10 +20,14 @@ import type { Card } from "@/src/models/card";
 import type { CollectionItem } from "@/src/models/collection-item";
 import type { CardCatalogSearchField } from "@/src/providers/card-catalog-provider";
 import { getDefaultCardCatalogProvider } from "@/src/providers/catalog-registry";
-import { wishlistRepository } from "@/src/repositories/repository-registry";
+import {
+  collectionRepository,
+  wishlistRepository,
+} from "@/src/repositories/repository-registry";
 import AddToCollectionModal from "@/src/features/search/AddToCollectionModal";
 import type { AddToCollectionFormValues } from "@/src/features/search/AddToCollectionModal";
 import CardDetailsModal from "@/src/features/search/CardDetailsModal";
+import CollectionDuplicateModal from "@/src/features/search/CollectionDuplicateModal";
 
 const SEARCH_FIELDS: {
   value: CardCatalogSearchField;
@@ -64,12 +69,17 @@ export default function SearchScreen() {
 
   const [detailsCard, setDetailsCard] = useState<Card | null>(null);
   const [collectionCard, setCollectionCard] = useState<Card | null>(null);
-  const [sessionCollectionItems, setSessionCollectionItems] = useState<
-    CollectionItem[]
+  const [pendingCollectionItem, setPendingCollectionItem] =
+    useState<CollectionItem | null>(null);
+  const [duplicateCandidates, setDuplicateCandidates] = useState<
+    readonly CollectionItem[]
   >([]);
+  const [isResolvingDuplicate, setIsResolvingDuplicate] = useState(false);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const [savingWishlistId, setSavingWishlistId] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState(false);
+  const collectionSaveInProgress = useRef(false);
 
   useEffect(() => {
     const term = query.trim();
@@ -138,32 +148,103 @@ export default function SearchScreen() {
     setCollectionCard(null);
   };
 
-  const handleSaveToCollection = (values: AddToCollectionFormValues) => {
-    if (!collectionCard) {
+  const handleSaveToCollection = async (values: AddToCollectionFormValues) => {
+    if (!collectionCard || collectionSaveInProgress.current) {
       return;
     }
 
-    const now = new Date().toISOString();
-    const item: CollectionItem = {
-      id: createEntryId(),
-      card: collectionCard,
-      quantity: values.quantity,
-      condition: values.condition,
-      language: values.language,
-      variant: values.variant,
-      purchasePrice: values.purchasePrice,
-      currentEstimatedPrice: null,
-      notes: values.notes,
-      acquisitionDate: values.acquisitionDate,
-      createdAt: now,
-      updatedAt: now,
-    };
-    setSessionCollectionItems((items) => [...items, item]);
-    setActionMessage(
-      `${item.card.name} added to this session's collection (${sessionCollectionItems.length + 1} saved). It won't persist after closing the app.`,
+    collectionSaveInProgress.current = true;
+    try {
+      const now = new Date().toISOString();
+      const item: CollectionItem = {
+        id: createEntryId(),
+        card: collectionCard,
+        quantity: values.quantity,
+        condition: values.condition,
+        language: values.language,
+        variant: values.variant,
+        purchasePrice: values.purchasePrice,
+        currentEstimatedPrice: null,
+        notes: values.notes,
+        acquisitionDate: values.acquisitionDate,
+        createdAt: now,
+        updatedAt: now,
+      };
+      const matches = (await collectionRepository.getAll()).filter((saved) =>
+        isSamePhysicalConfiguration(saved, item),
+      );
+
+      setActionMessage(null);
+      if (matches.length > 0) {
+        setPendingCollectionItem(item);
+        setDuplicateCandidates(matches);
+        setDuplicateError(null);
+        closeCollectionModal();
+        return;
+      }
+
+      await collectionRepository.add(item);
+      setActionMessage(`${item.card.name} added to Collection.`);
+      setActionError(false);
+      closeCollectionModal();
+    } catch (error) {
+      Alert.alert(
+        "Could not save card",
+        error instanceof Error
+          ? error.message
+          : "The card could not be added to your collection.",
+      );
+    } finally {
+      collectionSaveInProgress.current = false;
+    }
+  };
+
+  const resolveDuplicate = async (
+    operation: (pending: CollectionItem) => Promise<unknown>,
+    message: (pending: CollectionItem) => string,
+  ) => {
+    if (!pendingCollectionItem || isResolvingDuplicate) {
+      return;
+    }
+    setIsResolvingDuplicate(true);
+    setDuplicateError(null);
+    try {
+      await operation(pendingCollectionItem);
+      setActionMessage(message(pendingCollectionItem));
+      setActionError(false);
+      setPendingCollectionItem(null);
+      setDuplicateCandidates([]);
+    } catch (error) {
+      setDuplicateError(
+        error instanceof Error
+          ? error.message
+          : "The collection could not be updated.",
+      );
+    } finally {
+      setIsResolvingDuplicate(false);
+    }
+  };
+
+  const handleIncreaseDuplicate = (item: CollectionItem) => {
+    void resolveDuplicate(
+      (pending) =>
+        collectionRepository.incrementQuantity(item.id, pending.quantity),
+      (pending) =>
+        `${pending.card.name} quantity increased in Collection.`,
     );
-    setActionError(false);
-    closeCollectionModal();
+  };
+
+  const handleCreateSeparateEntry = () => {
+    void resolveDuplicate(
+      (pending) => collectionRepository.add(pending),
+      (pending) => `${pending.card.name} added as a separate Collection entry.`,
+    );
+  };
+
+  const closeDuplicateModal = () => {
+    setPendingCollectionItem(null);
+    setDuplicateCandidates([]);
+    setDuplicateError(null);
   };
 
   const handleAddToWishlist = async (card: Card) => {
@@ -514,7 +595,29 @@ export default function SearchScreen() {
         onClose={closeCollectionModal}
         onSave={handleSaveToCollection}
       />
+      <CollectionDuplicateModal
+        visible={pendingCollectionItem !== null}
+        items={duplicateCandidates}
+        isSaving={isResolvingDuplicate}
+        error={duplicateError}
+        onIncrease={handleIncreaseDuplicate}
+        onCreateSeparate={handleCreateSeparateEntry}
+        onClose={closeDuplicateModal}
+      />
     </SafeAreaView>
+  );
+}
+
+function isSamePhysicalConfiguration(
+  existing: CollectionItem,
+  incoming: CollectionItem,
+): boolean {
+  return (
+    existing.card.gameId === incoming.card.gameId &&
+    existing.card.externalId === incoming.card.externalId &&
+    existing.language === incoming.language &&
+    existing.variant === incoming.variant &&
+    existing.condition === incoming.condition
   );
 }
 
