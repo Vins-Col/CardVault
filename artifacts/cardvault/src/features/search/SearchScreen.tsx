@@ -18,6 +18,7 @@ import { useColors } from "@/hooks/useColors";
 import CardInfoCard from "@/src/components/CardInfoCard";
 import type { Card } from "@/src/models/card";
 import type { CollectionItem } from "@/src/models/collection-item";
+import { isSamePhysicalConfiguration } from "@/src/features/collection/collection-matching";
 import type { CardCatalogSearchField } from "@/src/providers/card-catalog-provider";
 import { getDefaultCardCatalogProvider } from "@/src/providers/catalog-registry";
 import {
@@ -27,6 +28,7 @@ import {
 import AddToCollectionModal from "@/src/features/search/AddToCollectionModal";
 import type { AddToCollectionFormValues } from "@/src/features/search/AddToCollectionModal";
 import CardDetailsModal from "@/src/features/search/CardDetailsModal";
+import type { WishlistActionResult } from "@/src/features/search/CardDetailsModal";
 import CollectionDuplicateModal from "@/src/features/search/CollectionDuplicateModal";
 
 const SEARCH_FIELDS: {
@@ -247,24 +249,27 @@ export default function SearchScreen() {
     setDuplicateError(null);
   };
 
-  const handleAddToWishlist = async (card: Card) => {
+  const handleAddToWishlist = async (
+    card: Card,
+  ): Promise<WishlistActionResult> => {
     setSavingWishlistId(card.id);
     setActionMessage(null);
     try {
       const added = await wishlistRepository.add(card);
-      setActionMessage(
-        added
-          ? `${card.name} added to Wishlist.`
-          : `${card.name} is already in Wishlist.`,
-      );
+      const message = added
+        ? `${card.name} added to Wishlist.`
+        : `${card.name} is already in Wishlist.`;
+      setActionMessage(message);
       setActionError(false);
+      return { message, error: false };
     } catch (error) {
-      setActionMessage(
+      const message =
         error instanceof Error
           ? error.message
-          : "The card could not be added to Wishlist.",
-      );
+          : "The card could not be added to Wishlist.";
+      setActionMessage(message);
       setActionError(true);
+      return { message, error: true };
     } finally {
       setSavingWishlistId(null);
     }
@@ -585,8 +590,10 @@ export default function SearchScreen() {
       </View>
 
       <CardDetailsModal
+        key={detailsCard?.id ?? "card-details-closed"}
         card={detailsCard}
         onClose={() => setDetailsCard(null)}
+        onAddToWishlist={handleAddToWishlist}
       />
       <AddToCollectionModal
         key={collectionCard?.id ?? "collection-form-closed"}
@@ -605,19 +612,6 @@ export default function SearchScreen() {
         onClose={closeDuplicateModal}
       />
     </SafeAreaView>
-  );
-}
-
-function isSamePhysicalConfiguration(
-  existing: CollectionItem,
-  incoming: CollectionItem,
-): boolean {
-  return (
-    existing.card.gameId === incoming.card.gameId &&
-    existing.card.externalId === incoming.card.externalId &&
-    existing.language === incoming.language &&
-    existing.variant === incoming.variant &&
-    existing.condition === incoming.condition
   );
 }
 

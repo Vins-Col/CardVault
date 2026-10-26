@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { Feather } from "@expo/vector-icons";
 import {
+  ActivityIndicator,
   Image,
   Modal,
   Pressable,
@@ -13,16 +14,47 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import type { Card } from "@/src/models/card";
 
+export interface WishlistActionResult {
+  message: string;
+  error: boolean;
+}
+
 interface CardDetailsModalProps {
   card: Card | null;
   onClose: () => void;
+  onAddToWishlist: (card: Card) => Promise<WishlistActionResult>;
 }
 
 export default function CardDetailsModal({
   card,
   onClose,
+  onAddToWishlist,
 }: CardDetailsModalProps) {
   const colors = useColors();
+  const [isAddingToWishlist, setIsAddingToWishlist] = useState(false);
+  const [wishlistResult, setWishlistResult] =
+    useState<WishlistActionResult | null>(null);
+
+  const handleAddToWishlist = async () => {
+    if (!card || isAddingToWishlist) {
+      return;
+    }
+    setIsAddingToWishlist(true);
+    setWishlistResult(null);
+    try {
+      setWishlistResult(await onAddToWishlist(card));
+    } catch (error) {
+      setWishlistResult({
+        message:
+          error instanceof Error
+            ? error.message
+            : "The card could not be added to Wishlist.",
+        error: true,
+      });
+    } finally {
+      setIsAddingToWishlist(false);
+    }
+  };
 
   return (
     <Modal
@@ -82,6 +114,57 @@ export default function CardDetailsModal({
             <DetailRow label="Set code" value={card.setId} />
             <DetailRow label="Rarity" value={card.rarity ?? "Not listed"} />
             <DetailRow label="Catalog language" value={card.language} />
+            {wishlistResult ? (
+              <Text
+                accessibilityLiveRegion={
+                  wishlistResult.error ? "assertive" : "polite"
+                }
+                style={[
+                  styles.wishlistFeedback,
+                  {
+                    color: wishlistResult.error
+                      ? colors.destructive
+                      : colors.accent,
+                  },
+                ]}
+              >
+                {wishlistResult.message}
+              </Text>
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Add card to Wishlist"
+              testID="details-add-to-wishlist"
+              disabled={isAddingToWishlist}
+              onPress={() => void handleAddToWishlist()}
+              style={[
+                styles.wishlistButton,
+                {
+                  backgroundColor: colors.primary,
+                  opacity: isAddingToWishlist ? 0.7 : 1,
+                },
+              ]}
+            >
+              {isAddingToWishlist ? (
+                <ActivityIndicator color={colors.primaryForeground} />
+              ) : (
+                <>
+                  <Feather
+                    name="heart"
+                    size={17}
+                    color={colors.primaryForeground}
+                  />
+                  <Text
+                    style={[
+                      styles.wishlistButtonLabel,
+                      { color: colors.primaryForeground },
+                    ]}
+                  >
+                    Add to Wishlist
+                  </Text>
+                </>
+              )}
+            </Pressable>
           </ScrollView>
         </SafeAreaView>
       ) : null}
@@ -164,5 +247,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "right",
     flexShrink: 1,
+  },
+  wishlistFeedback: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 16,
+  },
+  wishlistButton: {
+    minHeight: 50,
+    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 9,
+    marginTop: 14,
+  },
+  wishlistButtonLabel: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
   },
 });
