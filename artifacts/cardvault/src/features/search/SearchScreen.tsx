@@ -16,14 +16,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import CardInfoCard from "@/src/components/CardInfoCard";
 import type { Card } from "@/src/models/card";
+import type { CollectionItem } from "@/src/models/collection-item";
 import type { CardCatalogSearchField } from "@/src/providers/card-catalog-provider";
 import { getDefaultCardCatalogProvider } from "@/src/providers/catalog-registry";
-import type { OwnedCardLanguage } from "@/src/models/owned-card-language";
-import {
-  collectionRepository,
-  wishlistRepository,
-} from "@/src/repositories/repository-registry";
+import { wishlistRepository } from "@/src/repositories/repository-registry";
 import AddToCollectionModal from "@/src/features/search/AddToCollectionModal";
+import type { AddToCollectionFormValues } from "@/src/features/search/AddToCollectionModal";
 import CardDetailsModal from "@/src/features/search/CardDetailsModal";
 
 const SEARCH_FIELDS: {
@@ -66,14 +64,9 @@ export default function SearchScreen() {
 
   const [detailsCard, setDetailsCard] = useState<Card | null>(null);
   const [collectionCard, setCollectionCard] = useState<Card | null>(null);
-  const [ownedLanguage, setOwnedLanguage] = useState<OwnedCardLanguage | null>(
-    null,
-  );
-  const [condition, setCondition] = useState<string | null>(null);
-  const [isSavingCollection, setIsSavingCollection] = useState(false);
-  const [collectionSaveError, setCollectionSaveError] = useState<string | null>(
-    null,
-  );
+  const [sessionCollectionItems, setSessionCollectionItems] = useState<
+    CollectionItem[]
+  >([]);
   const [savingWishlistId, setSavingWishlistId] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState(false);
@@ -143,47 +136,34 @@ export default function SearchScreen() {
 
   const closeCollectionModal = () => {
     setCollectionCard(null);
-    setOwnedLanguage(null);
-    setCondition(null);
-    setCollectionSaveError(null);
   };
 
-  const handleSaveToCollection = async () => {
-    if (!collectionCard || !ownedLanguage || !condition) {
+  const handleSaveToCollection = (values: AddToCollectionFormValues) => {
+    if (!collectionCard) {
       return;
     }
 
-    setIsSavingCollection(true);
-    setCollectionSaveError(null);
-    setActionMessage(null);
-    try {
-      const now = new Date().toISOString();
-      await collectionRepository.add({
-        id: createEntryId(),
-        card: collectionCard,
-        quantity: 1,
-        condition,
-        language: ownedLanguage,
-        variant: collectionCard.variant,
-        purchasePrice: null,
-        currentEstimatedPrice: null,
-        notes: null,
-        acquisitionDate: null,
-        createdAt: now,
-        updatedAt: now,
-      });
-      setActionMessage(`${collectionCard.name} added to Collection.`);
-      setActionError(false);
-      closeCollectionModal();
-    } catch (error) {
-      setCollectionSaveError(
-        error instanceof Error
-          ? error.message
-          : "The card could not be saved. Try again.",
-      );
-    } finally {
-      setIsSavingCollection(false);
-    }
+    const now = new Date().toISOString();
+    const item: CollectionItem = {
+      id: createEntryId(),
+      card: collectionCard,
+      quantity: values.quantity,
+      condition: values.condition,
+      language: values.language,
+      variant: values.variant,
+      purchasePrice: values.purchasePrice,
+      currentEstimatedPrice: null,
+      notes: values.notes,
+      acquisitionDate: values.acquisitionDate,
+      createdAt: now,
+      updatedAt: now,
+    };
+    setSessionCollectionItems((items) => [...items, item]);
+    setActionMessage(
+      `${item.card.name} added to this session's collection (${sessionCollectionItems.length + 1} saved). It won't persist after closing the app.`,
+    );
+    setActionError(false);
+    closeCollectionModal();
   };
 
   const handleAddToWishlist = async (card: Card) => {
@@ -307,9 +287,6 @@ export default function SearchScreen() {
             onPress={() => {
               Keyboard.dismiss();
               setActionMessage(null);
-              setOwnedLanguage(null);
-              setCondition(null);
-              setCollectionSaveError(null);
               setCollectionCard(item);
             }}
           />
@@ -531,16 +508,11 @@ export default function SearchScreen() {
         onClose={() => setDetailsCard(null)}
       />
       <AddToCollectionModal
+        key={collectionCard?.id ?? "collection-form-closed"}
         card={collectionCard}
         visible={collectionCard !== null}
-        selectedLanguage={ownedLanguage}
-        selectedCondition={condition}
-        isSaving={isSavingCollection}
-        error={collectionSaveError}
-        onSelectLanguage={setOwnedLanguage}
-        onSelectCondition={setCondition}
         onClose={closeCollectionModal}
-        onSave={() => void handleSaveToCollection()}
+        onSave={handleSaveToCollection}
       />
     </SafeAreaView>
   );
