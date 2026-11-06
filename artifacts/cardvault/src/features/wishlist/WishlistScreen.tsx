@@ -2,6 +2,7 @@ import React, { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Platform,
   Pressable,
@@ -10,10 +11,16 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import CardInfoCard from "@/src/components/CardInfoCard";
 import type { Card } from "@/src/models/card";
-import { wishlistRepository } from "@/src/repositories/repository-registry";
+import type { CollectionItem } from "@/src/models/collection-item";
+import { isSamePhysicalConfiguration } from "@/src/features/collection/collection-matching";
+import {
+  collectionRepository,
+  wishlistRepository,
+} from "@/src/repositories/repository-registry";
 
 export default function WishlistScreen() {
   const colors = useColors();
@@ -21,6 +28,9 @@ export default function WishlistScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -55,6 +65,91 @@ export default function WishlistScreen() {
       };
     }, [reloadKey]),
   );
+
+  const removeFromWishlist = async (card: Card) => {
+    setBusyId(card.id);
+    setActionMessage(null);
+    try {
+      await wishlistRepository.remove(card.id);
+      setCards((current: readonly Card[]) =>
+        current.filter((c: Card) => c.id !== card.id),
+      );
+      setActionMessage(`${card.name} removed from Wishlist.`);
+      setActionError(false);
+    } catch (e) {
+      setActionMessage(
+        e instanceof Error ? e.message : "The card could not be removed.",
+      );
+      setActionError(true);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const confirmRemove = (card: Card) => {
+    Alert.alert(
+      "Remove from Wishlist?",
+      `${card.name} will be removed from your wishlist.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => void removeFromWishlist(card),
+        },
+      ],
+    );
+  };
+
+  const moveToCollection = async (card: Card) => {
+    setBusyId(card.id);
+    setActionMessage(null);
+    try {
+      const now = new Date().toISOString();
+      const item: CollectionItem = {
+        id: `collection-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+        card,
+        quantity: 1,
+        condition: "Near Mint",
+        language: card.language,
+        variant: card.variant,
+        purchasePrice: null,
+        currentEstimatedPrice: null,
+        notes: null,
+        acquisitionDate: null,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      // Check for duplicates using the existing logic
+      const allItems = await collectionRepository.getAll();
+      const match = allItems.find((existing: CollectionItem) =>
+        isSamePhysicalConfiguration(existing, item),
+      );
+
+      if (match) {
+        await collectionRepository.incrementQuantity(match.id, 1);
+      } else {
+        await collectionRepository.add(item);
+      }
+
+      // Remove from wishlist after successful add/update to collection
+      await wishlistRepository.remove(card.id);
+      setCards((current: readonly Card[]) =>
+        current.filter((c: Card) => c.id !== card.id),
+      );
+
+      setActionMessage(`${card.name} moved to Collection.`);
+      setActionError(false);
+    } catch (e) {
+      setActionMessage(
+        e instanceof Error ? e.message : "The card could not be moved.",
+      );
+      setActionError(true);
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -156,14 +251,84 @@ export default function WishlistScreen() {
         <Text style={[styles.statusText, { color: colors.mutedForeground }]}>
           {cards.length} {cards.length === 1 ? "saved card" : "saved cards"}
         </Text>
+        {actionMessage ? (
+          <Text
+            accessibilityLiveRegion={actionError ? "assertive" : "polite"}
+            style={[
+              styles.actionMessage,
+              { color: actionError ? colors.destructive : colors.accent },
+            ]}
+          >
+            {actionMessage}
+          </Text>
+        ) : null}
         <FlatList
           data={cards}
           keyExtractor={(card) => card.id}
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => <CardInfoCard card={item} />}
+          renderItem={({ item }) => (
+            <CardInfoCard
+              card={item}
+              actions={
+                <View style={styles.actions}>
+                  <WishlistAction
+                    icon="plus-circle"
+                    label="Collect"
+                    testID={`collect-card-${item.id}`}
+                    disabled={busyId !== null}
+                    onPress={() => void moveToCollection(item)}
+                  />
+                  <WishlistAction
+                    icon="trash-2"
+                    label="Remove"
+                    testID={`remove-card-${item.id}`}
+                    disabled={busyId !== null}
+                    onPress={() => confirmRemove(item)}
+                  />
+                </View>
+              }
+            />
+          )}
         />
       </View>
     </SafeAreaView>
+  );
+}
+
+function WishlistAction({
+  icon,
+  label,
+  testID,
+  disabled = false,
+  onPress,
+}: {
+  icon: keyof typeof Feather.glyphMap;
+  label: string;
+  testID: string;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      testID={testID}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.actionButton,
+        {
+          backgroundColor: pressed ? colors.secondary : "transparent",
+          opacity: disabled ? 0.45 : 1,
+        },
+      ]}
+    >
+      <Feather name={icon} size={16} color={colors.primary} />
+      <Text style={[styles.actionLabel, { color: colors.secondaryForeground }]}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -198,6 +363,31 @@ const styles = StyleSheet.create({
   list: {
     paddingTop: 18,
     paddingBottom: 20,
+  },
+  actionMessage: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 8,
+  },
+  actions: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  actionButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  actionLabel: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
   },
   center: {
     flex: 1,
