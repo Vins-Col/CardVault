@@ -134,6 +134,16 @@ export default function CollectionScreen() {
   };
 
   const confirmDelete = (item: CollectionItem) => {
+    if (Platform.OS === "web") {
+      if (
+        window.confirm(
+          `Delete collection entry?\n\n${item.card.name} will be removed from this device.`,
+        )
+      ) {
+        void deleteItem(item);
+      }
+      return;
+    }
     Alert.alert(
       "Delete collection entry?",
       `${item.card.name} will be removed from this device.`,

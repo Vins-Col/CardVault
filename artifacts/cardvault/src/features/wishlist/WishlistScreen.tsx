@@ -87,6 +87,16 @@ export default function WishlistScreen() {
   };
 
   const confirmRemove = (card: Card) => {
+    if (Platform.OS === "web") {
+      if (
+        window.confirm(
+          `Remove from Wishlist?\n\n${card.name} will be removed from your wishlist.`,
+        )
+      ) {
+        void removeFromWishlist(card);
+      }
+      return;
+    }
     Alert.alert(
       "Remove from Wishlist?",
       `${card.name} will be removed from your wishlist.`,

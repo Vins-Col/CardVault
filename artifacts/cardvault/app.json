@@ -7,9 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "cardvault",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "backgroundColor": "#101216"
-    },
     "ios": {
       "supportsTablet": false
     },

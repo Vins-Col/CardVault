@@ -556,37 +556,40 @@ export default function SearchScreen() {
           </View>
         ) : null}
 
-        {results.length > 0 && !isLoading && !searchError ? (
-          <FlatList
-            data={results}
-            keyExtractor={(item) => item.id}
-            renderItem={renderCard}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            contentContainerStyle={styles.results}
-            ListHeaderComponent={
+        <FlatList
+          style={styles.flatList}
+          data={results}
+          keyExtractor={(item) => item.id}
+          renderItem={renderCard}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={[
+            styles.results,
+            results.length === 0 && styles.emptyContentContainer,
+          ]}
+          ListHeaderComponent={
+            results.length > 0 ? (
               <Text
                 style={[styles.resultCount, { color: colors.mutedForeground }]}
               >
                 {results.length} {results.length === 1 ? "result" : "results"}
               </Text>
-            }
-            ListFooterComponent={
-              results.length === 12 ? (
-                <Text
-                  style={[
-                    styles.resultLimit,
-                    { color: colors.mutedForeground },
-                  ]}
-                >
-                  Showing the first 12 matches. Refine your search for more.
-                </Text>
-              ) : null
-            }
-          />
-        ) : (
-          <View style={styles.stateContainer}>{renderEmptyState()}</View>
-        )}
+            ) : null
+          }
+          ListEmptyComponent={renderEmptyState()}
+          ListFooterComponent={
+            results.length === 12 ? (
+              <Text
+                style={[
+                  styles.resultLimit,
+                  { color: colors.mutedForeground },
+                ]}
+              >
+                Showing the first 12 matches. Refine your search for more.
+              </Text>
+            ) : null
+          }
+        />
       </View>
 
       <CardDetailsModal
@@ -783,6 +786,13 @@ const styles = StyleSheet.create({
   results: {
     paddingTop: 14,
     paddingBottom: 18,
+  },
+  flatList: {
+    flex: 1,
+  },
+  emptyContentContainer: {
+    flexGrow: 1,
+    justifyContent: "center",
   },
   resultCount: {
     fontFamily: "Inter_500Medium",
