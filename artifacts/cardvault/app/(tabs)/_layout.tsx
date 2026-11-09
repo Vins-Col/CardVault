@@ -67,14 +67,14 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
-          tabBarAccessibilityLabel: "Home tab",
-          tabBarButtonTestID: "tab-home",
+          title: "Dashboard",
+          tabBarAccessibilityLabel: "Dashboard tab",
+          tabBarButtonTestID: "tab-dashboard",
           tabBarIcon: (props) => (
             <TabBarIcon
               {...props}
-              activeIcon="home"
-              inactiveIcon="home-outline"
+              activeIcon="grid"
+              inactiveIcon="grid-outline"
             />
           ),
         }}

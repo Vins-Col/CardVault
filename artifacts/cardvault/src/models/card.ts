@@ -1,3 +1,15 @@
+export interface TcgPlayerPrices {
+  market: number | null;
+  low: number | null;
+  mid: number | null;
+}
+
+export interface CardmarketPrices {
+  trendPrice: number | null;
+  averageSellPrice: number | null;
+  lowPrice: number | null;
+}
+
 export interface Card {
   id: string;
   gameId: string;
@@ -13,4 +25,6 @@ export interface Card {
   imageUrl: string | null;
   marketPrice: number | null;
   currency: string | null;
+  tcgplayerPrices: TcgPlayerPrices | null;
+  cardmarketPrices: CardmarketPrices | null;
 }

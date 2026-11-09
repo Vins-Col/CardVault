@@ -21,6 +21,7 @@ import {
   collectionRepository,
   wishlistRepository,
 } from "@/src/repositories/repository-registry";
+import { calculateWishlistValuation } from "@/src/utils/valuation";
 
 export default function WishlistScreen() {
   const colors = useColors();
@@ -255,12 +256,63 @@ export default function WishlistScreen() {
           Platform.OS === "web" ? styles.webTopInset : undefined,
         ]}
       >
-        <Text style={[styles.heading, { color: colors.foreground }]}>
-          Wishlist
-        </Text>
-        <Text style={[styles.statusText, { color: colors.mutedForeground }]}>
-          {cards.length} {cards.length === 1 ? "saved card" : "saved cards"}
-        </Text>
+        {(() => {
+          const valuation = calculateWishlistValuation(cards);
+          return (
+            <>
+              <Text style={[styles.heading, { color: colors.foreground }]}>
+                Wishlist
+              </Text>
+              <Text style={[styles.statusText, { color: colors.mutedForeground }]}>
+                {valuation.totalCards} {valuation.totalCards === 1 ? "card" : "cards"}
+              </Text>
+              <View
+                style={[
+                  styles.valuationCard,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                ]}
+              >
+                <View style={styles.valuationHeader}>
+                  <View>
+                    <Text style={[styles.valuationLabel, { color: colors.mutedForeground }]}>
+                      Wishlist Value
+                    </Text>
+                    <Text style={[styles.valuationTotal, { color: colors.foreground }]}>
+                      € {valuation.totalValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Text>
+                  </View>
+                  <View style={[styles.valuationBadge, { backgroundColor: colors.secondary }]}>
+                    <Feather name="heart" size={16} color={colors.accent} />
+                  </View>
+                </View>
+
+                <View style={[styles.valuationDivider, { backgroundColor: colors.border }]} />
+
+                <View style={styles.valuationGrid}>
+                  <View style={styles.valuationMetric}>
+                    <Text style={[styles.metricLabel, { color: colors.mutedForeground }]}>
+                      Average Card
+                    </Text>
+                    <Text style={[styles.metricValue, { color: colors.foreground }]}>
+                      € {valuation.averageCardValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Text>
+                  </View>
+                  <View style={styles.valuationMetric}>
+                    <Text style={[styles.metricLabel, { color: colors.mutedForeground }]}>
+                      Most Valuable Card
+                    </Text>
+                    <Text numberOfLines={1} style={[styles.metricValue, { color: colors.foreground }]}>
+                      {valuation.mostValuableCard ? valuation.mostValuableCard.name : "None"}
+                    </Text>
+                    <Text style={[styles.metricSubValue, { color: colors.mutedForeground }]}>
+                      {valuation.mostValuableCard ? `€ ${valuation.mostValuableCard.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "€ 0.00"}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </>
+          );
+        })()}
         {actionMessage ? (
           <Text
             accessibilityLiveRegion={actionError ? "assertive" : "polite"}
@@ -427,5 +479,60 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 17,
+  },
+  valuationCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  valuationHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  valuationLabel: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+  },
+  valuationTotal: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 26,
+    lineHeight: 32,
+    marginTop: 2,
+  },
+  valuationBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  valuationDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginVertical: 14,
+  },
+  valuationGrid: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  valuationMetric: {
+    flex: 1,
+  },
+  metricLabel: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+  },
+  metricValue: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    marginTop: 2,
+  },
+  metricSubValue: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+    marginTop: 1,
   },
 });

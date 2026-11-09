@@ -186,6 +186,8 @@ export class PokemonTcgDexCatalogProvider implements CardCatalogProvider {
       imageUrl: details.image ? `${details.image}/low.webp` : null,
       marketPrice: null,
       currency: null,
+      tcgplayerPrices: null,
+      cardmarketPrices: null,
     };
 
     this.cardCache.set(cacheKey, card);

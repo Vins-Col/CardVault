@@ -114,6 +114,45 @@ export default function CardDetailsModal({
             <DetailRow label="Set code" value={card.setId} />
             <DetailRow label="Rarity" value={card.rarity ?? "Not listed"} />
             <DetailRow label="Catalog language" value={card.language} />
+            {card.cardmarketPrices || card.tcgplayerPrices ? (
+              <View style={styles.pricingSection}>
+                <Text style={[styles.pricingSectionTitle, { color: colors.foreground }]}>
+                  Pricing
+                </Text>
+                {card.cardmarketPrices && (
+                  <View style={[styles.priceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <Text style={[styles.priceSourceHeader, { color: colors.foreground }]}>
+                      Cardmarket (EUR)
+                    </Text>
+                    {card.cardmarketPrices.trendPrice != null && (
+                      <DetailRow label="Trend Price" value={`€${card.cardmarketPrices.trendPrice.toFixed(2)}`} />
+                    )}
+                    {card.cardmarketPrices.averageSellPrice != null && (
+                      <DetailRow label="Average Sell Price" value={`€${card.cardmarketPrices.averageSellPrice.toFixed(2)}`} />
+                    )}
+                    {card.cardmarketPrices.lowPrice != null && (
+                      <DetailRow label="Low Price" value={`€${card.cardmarketPrices.lowPrice.toFixed(2)}`} />
+                    )}
+                  </View>
+                )}
+                {card.tcgplayerPrices && (
+                  <View style={[styles.priceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <Text style={[styles.priceSourceHeader, { color: colors.foreground }]}>
+                      TCGPlayer (USD)
+                    </Text>
+                    {card.tcgplayerPrices.market != null && (
+                      <DetailRow label="Market Price" value={`$${card.tcgplayerPrices.market.toFixed(2)}`} />
+                    )}
+                    {card.tcgplayerPrices.low != null && (
+                      <DetailRow label="Low Price" value={`$${card.tcgplayerPrices.low.toFixed(2)}`} />
+                    )}
+                    {card.tcgplayerPrices.mid != null && (
+                      <DetailRow label="Mid Price" value={`$${card.tcgplayerPrices.mid.toFixed(2)}`} />
+                    )}
+                  </View>
+                )}
+              </View>
+            ) : null}
             {wishlistResult ? (
               <Text
                 accessibilityLiveRegion={
@@ -266,5 +305,25 @@ const styles = StyleSheet.create({
   wishlistButtonLabel: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 15,
+  },
+  pricingSection: {
+    marginTop: 20,
+    gap: 12,
+  },
+  pricingSectionTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 18,
+    marginBottom: 4,
+  },
+  priceCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 14,
+    gap: 4,
+  },
+  priceSourceHeader: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    marginBottom: 8,
   },
 });

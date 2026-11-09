@@ -1,4 +1,5 @@
 import type { Card } from "@/src/models/card";
+import type { ParsedQuery } from "@/src/utils/query-parser";
 
 export type CardCatalogSearchField =
   "name" | "collectorNumber" | "setName" | "setCode" | "rarity";
@@ -12,6 +13,7 @@ export interface CardCatalogSearchOptions {
   field: CardCatalogSearchField;
   catalogLanguage: string;
   signal?: AbortSignal;
+  parsedQuery?: ParsedQuery;
 }
 
 export interface CardCatalogProvider<TCard extends Card = Card> {

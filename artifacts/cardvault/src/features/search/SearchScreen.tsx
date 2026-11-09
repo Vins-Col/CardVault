@@ -21,6 +21,8 @@ import type { CollectionItem } from "@/src/models/collection-item";
 import { isSamePhysicalConfiguration } from "@/src/features/collection/collection-matching";
 import type { CardCatalogSearchField } from "@/src/providers/card-catalog-provider";
 import { getDefaultCardCatalogProvider } from "@/src/providers/catalog-registry";
+import { parseSmartQuery } from "@/src/utils/query-parser";
+import type { ParsedQuery } from "@/src/utils/query-parser";
 import {
   collectionRepository,
   wishlistRepository,
@@ -47,11 +49,218 @@ const SEARCH_FIELDS: {
   { value: "rarity", label: "Rarity", placeholder: "Search a rarity" },
 ];
 
-const catalogProvider = getDefaultCardCatalogProvider();
-const catalogLanguages = catalogProvider.getSupportedLanguages();
+const defaultProvider = getDefaultCardCatalogProvider();
+const catalogLanguages = defaultProvider.getSupportedLanguages();
 
 function createEntryId(): string {
   return `collection-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+const LANGUAGE_CODE_TO_LABEL: Record<string, string> = {
+  ja: "Japanese",
+  en: "English",
+  fr: "French",
+  de: "German",
+  it: "Italian",
+  es: "Spanish",
+  ko: "Korean",
+  "zh-tw": "Chinese (Traditional)",
+  "zh-cn": "Chinese (Simplified)",
+};
+
+interface CollectorNumberInfo {
+  variants: Set<string>;
+  baseNum: string;
+  setSize: string | null;
+  raw: string;
+}
+
+function getCollectorNumberVariants(
+  numStr: string | null | undefined,
+): CollectorNumberInfo {
+  if (!numStr) {
+    return { variants: new Set(), baseNum: "", setSize: null, raw: "" };
+  }
+  const raw = numStr.toLowerCase().trim();
+  const parts = raw.split("/");
+  const base = parts[0]?.trim() ?? raw;
+  const setSize = parts[1]?.trim() ?? null;
+  const intVal = !isNaN(Number(base)) ? String(Number(base)) : base;
+  const padded = base.padStart(3, "0");
+
+  const variantList = [raw, base, intVal, padded];
+  if (setSize) {
+    variantList.push(`${base}/${setSize}`);
+    const intSetSize = !isNaN(Number(setSize)) ? String(Number(setSize)) : setSize;
+    variantList.push(`${intVal}/${intSetSize}`);
+  }
+  return {
+    variants: new Set(variantList),
+    baseNum: base,
+    setSize,
+    raw,
+  };
+}
+
+function filterAndRankCards(
+  cards: readonly Card[],
+  parsed: ParsedQuery,
+): readonly Card[] {
+  const { variants: targetVariants, baseNum, setSize, raw: targetRaw } = getCollectorNumberVariants(
+    parsed.collectorNumber,
+  );
+
+  if (parsed.collectorNumber) {
+    console.log(
+      `[Collector Search Debug] Query: "${parsed.raw}" | Collector Number: "${parsed.collectorNumber}" | Variants generated:`,
+      Array.from(targetVariants),
+    );
+  }
+
+  const getCardCollectorScore = (card: Card): number => {
+    if (!parsed.collectorNumber) {
+      return 0;
+    }
+    const cardNum = (card.collectorNumber ?? "").toLowerCase().trim();
+    const cardInfo = getCollectorNumberVariants(card.collectorNumber);
+
+    // Priority A: Exact match or base + setSize match
+    if (
+      cardNum === targetRaw ||
+      (setSize && cardInfo.baseNum === baseNum && cardInfo.setSize === setSize)
+    ) {
+      return 100;
+    }
+    // Priority B: Base number / padded match (e.g. 001)
+    if (
+      cardNum === baseNum ||
+      cardNum === cardInfo.baseNum ||
+      cardNum === baseNum.padStart(3, "0")
+    ) {
+      return 80;
+    }
+    // Priority C: Integer match (e.g. 1)
+    if (
+      cardNum === String(Number(baseNum)) ||
+      cardNum === String(Number(cardInfo.baseNum))
+    ) {
+      return 40;
+    }
+    // Substring match fallback
+    if (cardNum.includes(baseNum) || targetRaw.includes(cardNum)) {
+      return 20;
+    }
+    return 0;
+  };
+
+  const nameFiltered = cards.filter((card) => {
+    if (!parsed.name) {
+      return true;
+    }
+    const cardName = (card.name ?? "").toLowerCase();
+    const targetName = parsed.name.toLowerCase();
+    return cardName.includes(targetName);
+  });
+
+  const matchesCollectorNumber = (card: Card): boolean => {
+    if (!parsed.collectorNumber) {
+      return false;
+    }
+    return getCardCollectorScore(card) > 0;
+  };
+
+  const matchesFacets = (card: Card): boolean => {
+    if (parsed.collectorNumber && !matchesCollectorNumber(card)) {
+      return false;
+    }
+
+    if (parsed.rarity) {
+      const cardRarity = (card.rarity ?? "").toLowerCase();
+      const targetRarity = parsed.rarity.toLowerCase();
+      if (!cardRarity.includes(targetRarity)) {
+        return false;
+      }
+    }
+
+    if (parsed.set) {
+      const setName = (card.setName ?? "").toLowerCase();
+      const setId = (card.setId ?? "").toLowerCase();
+      const targetSet = parsed.set.toLowerCase();
+      if (!setName.includes(targetSet) && !setId.includes(targetSet)) {
+        return false;
+      }
+    }
+
+    if (parsed.language) {
+      const targetLangCode = parsed.language.toLowerCase();
+      const targetLangLabel = (
+        LANGUAGE_CODE_TO_LABEL[targetLangCode] ?? targetLangCode
+      ).toLowerCase();
+      const cardLang = (card.language ?? "").toLowerCase();
+      if (
+        !cardLang.includes(targetLangLabel) &&
+        !cardLang.includes(targetLangCode)
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const targetName = (parsed.name ?? "").toLowerCase();
+  const cardScores = new Map<Card, { score: number; collectorScore: number; nameMatch: number }>();
+
+  for (const card of nameFiltered) {
+    const collectorScore = getCardCollectorScore(card);
+    const nameMatch = parsed.name
+      ? card.name.toLowerCase().includes(targetName)
+        ? 1
+        : 0
+      : 1;
+    const bothMatchBonus = collectorScore > 0 && nameMatch > 0 ? 50 : 0;
+    const score = collectorScore + nameMatch * 50 + bothMatchBonus;
+    cardScores.set(card, { score, collectorScore, nameMatch });
+
+    if (parsed.collectorNumber && collectorScore > 0) {
+      console.log(
+        `[Collector Search Debug] Card: ${card.id} (${card.name} #${card.collectorNumber}) | Collector Score: ${collectorScore} | Total Score: ${score}`,
+      );
+    }
+  }
+
+  return [...nameFiltered].sort((a, b) => {
+    const scoreA = cardScores.get(a)?.score ?? 0;
+    const scoreB = cardScores.get(b)?.score ?? 0;
+    if (scoreA !== scoreB) {
+      return scoreB - scoreA;
+    }
+
+    const aMatch = matchesFacets(a) ? 1 : 0;
+    const bMatch = matchesFacets(b) ? 1 : 0;
+    if (aMatch !== bMatch) {
+      return bMatch - aMatch;
+    }
+
+    if (targetName) {
+      const aName = a.name.toLowerCase();
+      const bName = b.name.toLowerCase();
+
+      const aExact = aName === targetName ? 1 : 0;
+      const bExact = bName === targetName ? 1 : 0;
+      if (aExact !== bExact) {
+        return bExact - aExact;
+      }
+
+      const aStarts = aName.startsWith(targetName) ? 1 : 0;
+      const bStarts = bName.startsWith(targetName) ? 1 : 0;
+      if (aStarts !== bStarts) {
+        return bStarts - aStarts;
+      }
+    }
+
+    return 0;
+  });
 }
 
 export default function SearchScreen() {
@@ -104,13 +313,24 @@ export default function SearchScreen() {
       setIsLoading(true);
 
       try {
-        const cards = await catalogProvider.searchCards(term, {
-          field: searchField,
-          catalogLanguage,
+        const parsed = parseSmartQuery(query);
+        const effectiveField = searchField;
+        const effectiveQuery = parsed.name || query.trim();
+
+        const effectiveLanguage = catalogLanguage;
+
+        const provider = getDefaultCardCatalogProvider();
+        const cards = await provider.searchCards(effectiveQuery, {
+          field: effectiveField,
+          catalogLanguage: effectiveLanguage,
           signal: controller.signal,
+          parsedQuery: parsed,
         });
+
+        const rankedCards = filterAndRankCards(cards, parsed);
+
         if (currentRequest === requestId.current) {
-          setResults(cards);
+          setResults(rankedCards);
           setHasSearched(true);
         }
       } catch (error) {
