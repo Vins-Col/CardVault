@@ -866,7 +866,7 @@ export default function SearchScreen() {
               >
                 {results.length} {results.length === 1 ? "result" : "results"}
               </Text>
-            ) : null
+            ) : undefined
           }
           ListEmptyComponent={renderEmptyState()}
           ListFooterComponent={
@@ -879,7 +879,7 @@ export default function SearchScreen() {
               >
                 Showing the first 12 matches. Refine your search for more.
               </Text>
-            ) : null
+            ) : undefined
           }
         />
       </View>

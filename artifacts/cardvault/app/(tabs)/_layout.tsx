@@ -14,7 +14,7 @@ function TabBarIcon({
   inactiveIcon,
 }: {
   focused: boolean;
-  color: ColorValue;
+  color: ColorValue | string | undefined;
   activeIcon: TabIcon;
   inactiveIcon: TabIcon;
 }) {
@@ -22,7 +22,7 @@ function TabBarIcon({
     <Ionicons
       name={focused ? activeIcon : inactiveIcon}
       size={22}
-      color={color}
+      color={color as string}
     />
   );
 }
