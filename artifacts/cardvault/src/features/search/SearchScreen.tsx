@@ -32,6 +32,13 @@ import type { AddToCollectionFormValues } from "@/src/features/search/AddToColle
 import CardDetailsModal from "@/src/features/search/CardDetailsModal";
 import type { WishlistActionResult } from "@/src/features/search/CardDetailsModal";
 import CollectionDuplicateModal from "@/src/features/search/CollectionDuplicateModal";
+import {
+  pickImageFromGallery,
+  takePhotoWithCamera,
+  extractCardFromImage,
+  type OcrExtractionResult,
+} from "@/src/services/ocr-service";
+import OcrConfirmationModal from "@/src/features/search/OcrConfirmationModal";
 
 const SEARCH_FIELDS: {
   value: CardCatalogSearchField;
@@ -277,6 +284,58 @@ export default function SearchScreen() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const requestId = useRef(0);
+
+  const [scannedImageUri, setScannedImageUri] = useState<string | null>(null);
+  const [extractedCard, setExtractedCard] = useState<OcrExtractionResult | null>(null);
+
+  const handleScanPhoto = async () => {
+    try {
+      const uri = await takePhotoWithCamera();
+      if (uri) {
+        const extracted = extractCardFromImage(uri);
+        setScannedImageUri(uri);
+        setExtractedCard(extracted);
+      }
+    } catch (e) {
+      Alert.alert("Camera Error", e instanceof Error ? e.message : "Could not take photo.");
+    }
+  };
+
+  const handleScanGallery = async () => {
+    try {
+      const uri = await pickImageFromGallery();
+      if (uri) {
+        const extracted = extractCardFromImage(uri);
+        setScannedImageUri(uri);
+        setExtractedCard(extracted);
+      }
+    } catch (e) {
+      Alert.alert("Gallery Error", e instanceof Error ? e.message : "Could not pick image.");
+    }
+  };
+
+  const promptScanOptions = () => {
+    if (Platform.OS === "web") {
+      const choice = window.confirm("Choose 'OK' to pick from gallery, or 'Cancel' to take a photo.")
+        ? "gallery"
+        : "camera";
+      if (choice === "gallery") {
+        void handleScanGallery();
+      } else {
+        void handleScanPhoto();
+      }
+      return;
+    }
+    Alert.alert(
+      "Scan Card",
+      "Choose a method to scan your Pokémon card",
+      [
+        { text: "Take Photo", onPress: () => void handleScanPhoto() },
+        { text: "Choose From Gallery", onPress: () => void handleScanGallery() },
+        { text: "Cancel", style: "cancel" },
+      ],
+    );
+  };
 
   const [detailsCard, setDetailsCard] = useState<Card | null>(null);
   const [collectionCard, setCollectionCard] = useState<Card | null>(null);
@@ -619,10 +678,23 @@ export default function SearchScreen() {
           Platform.OS === "web" ? styles.webTopInset : undefined,
         ]}
       >
-        <Text style={[styles.title, { color: colors.foreground }]}>Search</Text>
-        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-          Search Pokémon cards by name, number, set, or rarity.
-        </Text>
+        <View style={styles.headerRow}>
+          <View style={styles.headerTextWrap}>
+            <Text style={[styles.title, { color: colors.foreground }]}>Search</Text>
+            <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+              Search Pokémon cards by name, number, set, or rarity.
+            </Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Scan card with camera"
+            testID="scan-card-button"
+            onPress={promptScanOptions}
+            style={[styles.scanButton, { backgroundColor: colors.secondary, borderColor: colors.border }]}
+          >
+            <Feather name="camera" size={20} color={colors.primary} />
+          </Pressable>
+        </View>
 
         <View
           style={[
@@ -834,6 +906,19 @@ export default function SearchScreen() {
         onCreateSeparate={handleCreateSeparateEntry}
         onClose={closeDuplicateModal}
       />
+      <OcrConfirmationModal
+        imageUri={scannedImageUri}
+        extracted={extractedCard}
+        onClose={() => {
+          setScannedImageUri(null);
+          setExtractedCard(null);
+        }}
+        onConfirmSearch={(searchQuery) => {
+          setQuery(searchQuery);
+          setScannedImageUri(null);
+          setExtractedCard(null);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -903,6 +988,24 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginTop: 4,
     marginBottom: 16,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  headerTextWrap: {
+    flex: 1,
+  },
+  scanButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
   },
   inputWrap: {
     height: 52,

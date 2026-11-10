@@ -1,8 +1,9 @@
 import React, { useCallback, useState } from "react";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
   ActivityIndicator,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,6 +21,7 @@ import { calculateCollectionValuation } from "@/src/utils/valuation";
 
 export default function HomeScreen() {
   const colors = useColors();
+  const router = useRouter();
   const [collectionItems, setCollectionItems] = useState<readonly CollectionItem[]>([]);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -201,6 +203,33 @@ export default function HomeScreen() {
             </Text>
           </View>
         </View>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="View collection statistics"
+          onPress={() => router.push("/statistics")}
+          style={({ pressed }) => [
+            styles.statsBanner,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              opacity: pressed ? 0.85 : 1,
+            },
+          ]}
+        >
+          <View style={[styles.iconContainer, { backgroundColor: colors.secondary, marginBottom: 0 }]}>
+            <Feather name="bar-chart-2" size={18} color={colors.primary} />
+          </View>
+          <View style={styles.statsBannerText}>
+            <Text style={[styles.statsBannerTitle, { color: colors.foreground }]}>
+              Collection Statistics
+            </Text>
+            <Text style={[styles.statsBannerSub, { color: colors.mutedForeground }]}>
+              Set breakdowns, language, and rarity insights
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -313,6 +342,27 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   infoCardSubTitle: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  statsBanner: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  statsBannerText: {
+    flex: 1,
+  },
+  statsBannerTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 16,
+  },
+  statsBannerSub: {
     fontFamily: "Inter_400Regular",
     fontSize: 12,
     marginTop: 2,
