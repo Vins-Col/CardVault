@@ -1,7 +1,7 @@
 import type { OcrProvider, OcrResult } from "./ocr-types";
-import { HeuristicOcrProvider } from "./heuristic-ocr-provider";
+import { MlKitOcrProvider } from "./mlkit-ocr-provider";
 
-let activeProvider: OcrProvider = new HeuristicOcrProvider();
+let activeProvider: OcrProvider = new MlKitOcrProvider();
 
 export function setOcrProvider(provider: OcrProvider): void {
   activeProvider = provider;

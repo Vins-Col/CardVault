@@ -38,6 +38,8 @@ import {
   type OcrExtractionResult,
 } from "@/src/services/ocr-service";
 import OcrConfirmationModal from "@/src/features/search/OcrConfirmationModal";
+import CardCaptureOverlay from "@/src/components/CardCaptureOverlay";
+import CameraScreen from "@/src/features/search/CameraScreen";
 
 const catalogLanguages = [
   { code: "", label: "🌐 Any" },
@@ -236,21 +238,31 @@ export default function SearchScreen() {
 
   const [scannedImageUri, setScannedImageUri] = useState<string | null>(null);
   const [extractedCard, setExtractedCard] = useState<OcrExtractionResult | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   const handleScanPhoto = async () => {
-    try {
-      const uri = await takePhotoWithCamera();
-      if (uri) {
-        const extracted = await extractCardFromImage(uri);
-        setScannedImageUri(uri);
-        setExtractedCard(extracted);
+    if (Platform.OS === "web") {
+      setIsScanning(true);
+      try {
+        const uri = await takePhotoWithCamera();
+        if (uri) {
+          const extracted = await extractCardFromImage(uri);
+          setScannedImageUri(uri);
+          setExtractedCard(extracted);
+        }
+      } catch (e) {
+        Alert.alert("Camera Error", e instanceof Error ? e.message : "Could not take photo.");
+      } finally {
+        setIsScanning(false);
       }
-    } catch (e) {
-      Alert.alert("Camera Error", e instanceof Error ? e.message : "Could not take photo.");
+      return;
     }
+    setIsCameraOpen(true);
   };
 
   const handleScanGallery = async () => {
+    setIsScanning(true);
     try {
       const uri = await pickImageFromGallery();
       if (uri) {
@@ -260,6 +272,8 @@ export default function SearchScreen() {
       }
     } catch (e) {
       Alert.alert("Gallery Error", e instanceof Error ? e.message : "Could not pick image.");
+    } finally {
+      setIsScanning(false);
     }
   };
 
@@ -822,6 +836,24 @@ export default function SearchScreen() {
           setExtractedCard(null);
         }}
       />
+      <CameraScreen
+        visible={isCameraOpen}
+        onClose={() => setIsCameraOpen(false)}
+        onCapture={async (croppedUri) => {
+          setIsCameraOpen(false);
+          setIsScanning(true);
+          try {
+            const extracted = await extractCardFromImage(croppedUri);
+            setScannedImageUri(croppedUri);
+            setExtractedCard(extracted);
+          } catch (e) {
+            Alert.alert("OCR Error", e instanceof Error ? e.message : "Could not process card image.");
+          } finally {
+            setIsScanning(false);
+          }
+        }}
+      />
+      <CardCaptureOverlay visible={isScanning} />
     </SafeAreaView>
   );
 }

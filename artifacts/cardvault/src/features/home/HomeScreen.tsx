@@ -12,14 +12,16 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
+import type { Card } from "@/src/models/card";
 import type { CollectionItem } from "@/src/models/collection-item";
 import {
   collectionRepository,
   wishlistRepository,
 } from "@/src/repositories/repository-registry";
-import { calculateCollectionValuation } from "@/src/utils/valuation";
+import { calculateCollectionValuation, calculateWishlistValuation } from "@/src/utils/valuation";
 import { AppCard } from "@/src/components/ui/AppCard";
 import { StatCard } from "@/src/components/ui/StatCard";
+import { SectionTitle } from "@/src/components/ui/SectionTitle";
 import { spacing } from "@/src/theme/spacing";
 import { typography } from "@/src/theme/typography";
 
@@ -27,7 +29,7 @@ export default function HomeScreen() {
   const colors = useColors();
   const router = useRouter();
   const [collectionItems, setCollectionItems] = useState<readonly CollectionItem[]>([]);
-  const [wishlistCount, setWishlistCount] = useState(0);
+  const [wishlistCards, setWishlistCards] = useState<readonly Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,10 +43,10 @@ export default function HomeScreen() {
         collectionRepository.getAll(),
         wishlistRepository.getAll(),
       ])
-        .then(([items, wishlistCards]) => {
+        .then(([items, wishlist]) => {
           if (isActive) {
             setCollectionItems(items);
-            setWishlistCount(wishlistCards.length);
+            setWishlistCards(wishlist);
           }
         })
         .catch((loadError: unknown) => {
@@ -103,6 +105,8 @@ export default function HomeScreen() {
   }
 
   const valuation = calculateCollectionValuation(collectionItems);
+  const wishlistValuation = calculateWishlistValuation(wishlistCards);
+  const recentItems = [...collectionItems].reverse().slice(0, 5);
 
   return (
     <SafeAreaView
@@ -159,25 +163,88 @@ export default function HomeScreen() {
           </View>
         </AppCard>
 
-        <View style={styles.row}>
-          <StatCard
-            label="Most Valuable Card"
-            value={valuation.mostValuableCard ? valuation.mostValuableCard.name : "None"}
-            subtext={
-              valuation.mostValuableCard
-                ? `€ ${valuation.mostValuableCard.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                : "€ 0.00"
-            }
-            style={{ borderRadius: 16, padding: spacing.lg }}
-          />
+        <AppCard style={{ marginTop: 0, marginBottom: spacing.md, padding: spacing.lg, borderRadius: 16 }}>
+          <View style={styles.valuationHeader}>
+            <View>
+              <Text style={[styles.valuationLabel, { color: colors.mutedForeground, fontFamily: typography.fonts.medium, fontSize: typography.sizes.sm }]}>
+                Wishlist Value
+              </Text>
+              <Text style={[styles.valuationTotal, { color: colors.foreground, fontFamily: typography.fonts.bold, fontSize: 26 }]}>
+                € {wishlistValuation.totalValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </Text>
+            </View>
+            <View style={[styles.valuationBadge, { backgroundColor: colors.secondary }]}>
+              <Feather name="bookmark" size={16} color={colors.primary} />
+            </View>
+          </View>
 
-          <StatCard
-            label="Wishlist Items"
-            value={wishlistCount}
-            subtext="Saved to wishlist"
-            style={{ borderRadius: 16, padding: spacing.lg }}
-          />
-        </View>
+          <View style={[styles.valuationDivider, { backgroundColor: colors.border }]} />
+
+          <View style={styles.valuationGrid}>
+            <View style={styles.valuationMetric}>
+              <Text style={[styles.metricLabel, { color: colors.mutedForeground, fontFamily: typography.fonts.regular, fontSize: typography.sizes.xs }]}>
+                Wishlist Items
+              </Text>
+              <Text style={[styles.metricValue, { color: colors.foreground, fontFamily: typography.fonts.semiBold, fontSize: typography.sizes.md }]}>
+                {wishlistValuation.totalCards}
+              </Text>
+            </View>
+            <View style={styles.valuationMetric}>
+              <Text style={[styles.metricLabel, { color: colors.mutedForeground, fontFamily: typography.fonts.regular, fontSize: typography.sizes.xs }]}>
+                Average Wishlist Card
+              </Text>
+              <Text style={[styles.metricValue, { color: colors.foreground, fontFamily: typography.fonts.semiBold, fontSize: typography.sizes.md }]}>
+                € {wishlistValuation.averageCardValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </Text>
+            </View>
+          </View>
+        </AppCard>
+
+        <StatCard
+          label="Most Valuable Card"
+          value={valuation.mostValuableCard ? valuation.mostValuableCard.name : "None"}
+          subtext={
+            valuation.mostValuableCard
+              ? `€ ${valuation.mostValuableCard.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              : "€ 0.00"
+          }
+          style={{ borderRadius: 16, padding: spacing.lg, marginBottom: spacing.md }}
+        />
+
+        <SectionTitle>Recent Additions</SectionTitle>
+        <AppCard style={{ borderRadius: 16, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, marginBottom: spacing.md }}>
+          {recentItems.length === 0 ? (
+            <Text style={[styles.emptyText, { color: colors.mutedForeground, paddingVertical: 12, textAlign: "center" }]}>
+              No collection items added yet.
+            </Text>
+          ) : (
+            recentItems.map((item, index) => (
+              <View
+                key={item.id}
+                style={[
+                  styles.recentRow,
+                  index > 0 && { borderTopColor: colors.border, borderTopWidth: StyleSheet.hairlineWidth },
+                ]}
+              >
+                <View style={styles.recentRowLeft}>
+                  <Text style={[styles.recentName, { color: colors.foreground, fontFamily: typography.fonts.semiBold, fontSize: typography.sizes.sm }]}>
+                    {item.card.name}
+                  </Text>
+                  <Text style={[styles.recentSub, { color: colors.mutedForeground, fontFamily: typography.fonts.regular, fontSize: typography.sizes.xs }]}>
+                    {item.card.setName}
+                  </Text>
+                </View>
+                {item.quantity > 1 ? (
+                  <View style={[styles.recentBadge, { backgroundColor: colors.secondary }]}>
+                    <Text style={[styles.recentBadgeText, { color: colors.primary, fontFamily: typography.fonts.medium, fontSize: typography.sizes.xs }]}>
+                      x{item.quantity}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ))
+          )}
+        </AppCard>
 
         <Pressable
           accessibilityRole="button"
@@ -343,5 +410,34 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 12,
     marginTop: 2,
+  },
+  emptyText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+  },
+  recentRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  recentRowLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  recentName: {
+    fontSize: 14,
+  },
+  recentSub: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  recentBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  recentBadgeText: {
+    fontSize: 12,
   },
 });
