@@ -48,6 +48,37 @@ const s3 = parseSmartQuery("EVS 111");
 assert.strictEqual(s3.set, "EVS");
 assert.strictEqual(s3.collectorNumber, "111");
 
+// Name + Set + Number Test Cases
+const ns1 = parseSmartQuery("Eevee DLR 114");
+assert.strictEqual(ns1.name, "Eevee");
+assert.strictEqual(ns1.set, "DLR");
+assert.strictEqual(ns1.collectorNumber, "114");
+
+const ns2 = parseSmartQuery("Rayquaza SWSH7 218");
+assert.strictEqual(ns2.name, "Rayquaza");
+assert.strictEqual(ns2.set, "SWSH7");
+assert.strictEqual(ns2.collectorNumber, "218");
+
+const ns3 = parseSmartQuery("Pikachu WCS23 001");
+assert.strictEqual(ns3.name, "Pikachu");
+assert.strictEqual(ns3.set, "WCS23");
+assert.strictEqual(ns3.collectorNumber, "001");
+
+const ns4 = parseSmartQuery("Mew MEW 183");
+assert.strictEqual(ns4.name, "Mew");
+assert.strictEqual(ns4.set, "MEW");
+assert.strictEqual(ns4.collectorNumber, "183");
+
+const ns5 = parseSmartQuery("Ditto PAL 105");
+assert.strictEqual(ns5.name, "Ditto");
+assert.strictEqual(ns5.set, "PAL");
+assert.strictEqual(ns5.collectorNumber, "105");
+
+const ns6 = parseSmartQuery("Hoopa PAR 098");
+assert.strictEqual(ns6.name, "Hoopa");
+assert.strictEqual(ns6.set, "PAR");
+assert.strictEqual(ns6.collectorNumber, "098");
+
 // Search V2 Phase 2 Language Alias Test Cases
 const l1 = parseSmartQuery("Rayquaza japanese");
 assert.strictEqual(l1.name, "Rayquaza");

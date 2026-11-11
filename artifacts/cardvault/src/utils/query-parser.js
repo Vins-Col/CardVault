@@ -67,6 +67,11 @@ const SET_KEYWORDS = new Set([
     "151",
     "wcs23",
     "evs",
+    "dlr",
+    "mew",
+    "pal",
+    "par",
+    "swsh7",
 ]);
 
 const COLLECTOR_NUMBER_REGEX = /\b\d+(?:[\/\-]\d+)?\b/;
@@ -121,12 +126,35 @@ function parseSmartQuery(rawQuery) {
             continue;
         }
 
-        if (!set && (SET_KEYWORDS.has(lowerToken) || (collectorNumber && /^[a-z0-9]{2,6}$/i.test(token)))) {
-            set = token;
-            continue;
-        }
-
         remainingTokens.push(token);
+    }
+
+    if (collectorNumber) {
+        if (remainingTokens.length >= 2) {
+            const lastToken = remainingTokens[remainingTokens.length - 1];
+            if (SET_KEYWORDS.has(lastToken.toLowerCase())) {
+                set = lastToken;
+                remainingTokens.pop();
+            }
+        } else if (remainingTokens.length === 1) {
+            const singleToken = remainingTokens[0];
+            if (SET_KEYWORDS.has(singleToken.toLowerCase())) {
+                set = singleToken;
+                remainingTokens.pop();
+            }
+        }
+    } else {
+        const filteredTokens = [];
+        for (const token of remainingTokens) {
+            const lowerToken = token.toLowerCase();
+            if (!set && SET_KEYWORDS.has(lowerToken) && (remainingTokens.length > 1 || !isAmbiguousNameSetOverlap(lowerToken))) {
+                set = token;
+            } else {
+                filteredTokens.push(token);
+            }
+        }
+        remainingTokens.length = 0;
+        remainingTokens.push(...filteredTokens);
     }
 
     let name = remainingTokens.join(" ").trim();
@@ -151,4 +179,9 @@ function parseSmartQuery(rawQuery) {
         set,
         keywords,
     };
+}
+
+function isAmbiguousNameSetOverlap(token) {
+    const ambiguous = new Set(["mew"]);
+    return ambiguous.has(token.toLowerCase());
 }
