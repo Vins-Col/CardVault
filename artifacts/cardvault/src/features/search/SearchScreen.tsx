@@ -241,7 +241,7 @@ export default function SearchScreen() {
     try {
       const uri = await takePhotoWithCamera();
       if (uri) {
-        const extracted = extractCardFromImage(uri);
+        const extracted = await extractCardFromImage(uri);
         setScannedImageUri(uri);
         setExtractedCard(extracted);
       }
@@ -254,7 +254,7 @@ export default function SearchScreen() {
     try {
       const uri = await pickImageFromGallery();
       if (uri) {
-        const extracted = extractCardFromImage(uri);
+        const extracted = await extractCardFromImage(uri);
         setScannedImageUri(uri);
         setExtractedCard(extracted);
       }
