@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useRef } from "react";
 import { useFocusEffect } from "expo-router";
 import {
   ActivityIndicator,
@@ -17,11 +17,18 @@ import CardInfoCard from "@/src/components/CardInfoCard";
 import type { Card } from "@/src/models/card";
 import type { CollectionItem } from "@/src/models/collection-item";
 import { isSamePhysicalConfiguration } from "@/src/features/collection/collection-matching";
+import AddToCollectionModal from "@/src/features/search/AddToCollectionModal";
+import type { AddToCollectionFormValues } from "@/src/features/search/AddToCollectionModal";
+import CollectionDuplicateModal from "@/src/features/search/CollectionDuplicateModal";
 import {
   collectionRepository,
   wishlistRepository,
 } from "@/src/repositories/repository-registry";
 import { calculateWishlistValuation } from "@/src/utils/valuation";
+
+function createEntryId(): string {
+  return `collection-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 export default function WishlistScreen() {
   const colors = useColors();
@@ -32,6 +39,16 @@ export default function WishlistScreen() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState(false);
+
+  const [collectionCard, setCollectionCard] = useState<Card | null>(null);
+  const collectionSaveInProgress = useRef(false);
+  const [pendingCollectionItem, setPendingCollectionItem] =
+    useState<CollectionItem | null>(null);
+  const [duplicateCandidates, setDuplicateCandidates] = useState<
+    readonly CollectionItem[]
+  >([]);
+  const [isResolvingDuplicate, setIsResolvingDuplicate] = useState(false);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -112,54 +129,123 @@ export default function WishlistScreen() {
     );
   };
 
-  const moveToCollection = async (card: Card) => {
-    setBusyId(card.id);
+  const handleOpenCollectModal = (card: Card) => {
+    setCollectionCard(card);
     setActionMessage(null);
+  };
+
+  const closeCollectionModal = () => {
+    setCollectionCard(null);
+  };
+
+  const handleSaveToCollection = async (values: AddToCollectionFormValues) => {
+    if (!collectionCard || collectionSaveInProgress.current) {
+      return;
+    }
+
+    collectionSaveInProgress.current = true;
     try {
       const now = new Date().toISOString();
       const item: CollectionItem = {
-        id: `collection-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-        card,
-        quantity: 1,
-        condition: "Near Mint",
-        language: card.language,
-        variant: card.variant,
-        purchasePrice: null,
+        id: createEntryId(),
+        card: collectionCard,
+        quantity: values.quantity,
+        condition: values.condition,
+        language: values.language,
+        variant: values.variant,
+        purchasePrice: values.purchasePrice,
         currentEstimatedPrice: null,
-        notes: null,
-        acquisitionDate: null,
+        notes: values.notes,
+        acquisitionDate: values.acquisitionDate,
         createdAt: now,
         updatedAt: now,
       };
 
-      // Check for duplicates using the existing logic
-      const allItems = await collectionRepository.getAll();
-      const match = allItems.find((existing: CollectionItem) =>
-        isSamePhysicalConfiguration(existing, item),
+      const matches = (await collectionRepository.getAll()).filter((saved) =>
+        isSamePhysicalConfiguration(saved, item),
       );
 
-      if (match) {
-        await collectionRepository.incrementQuantity(match.id, 1);
-      } else {
-        await collectionRepository.add(item);
+      setActionMessage(null);
+      if (matches.length > 0) {
+        setPendingCollectionItem(item);
+        setDuplicateCandidates(matches);
+        setDuplicateError(null);
+        closeCollectionModal();
+        return;
       }
 
-      // Remove from wishlist after successful add/update to collection
-      await wishlistRepository.remove(card.id);
+      await collectionRepository.add(item);
+      await wishlistRepository.remove(collectionCard.id);
       setCards((current: readonly Card[]) =>
-        current.filter((c: Card) => c.id !== card.id),
+        current.filter((c: Card) => c.id !== collectionCard.id),
       );
 
-      setActionMessage(`${card.name} moved to Collection.`);
+      setActionMessage(`${item.card.name} added to Collection.`);
       setActionError(false);
-    } catch (e) {
-      setActionMessage(
-        e instanceof Error ? e.message : "The card could not be moved.",
+      closeCollectionModal();
+    } catch (error) {
+      Alert.alert(
+        "Could not save card",
+        error instanceof Error
+          ? error.message
+          : "The card could not be added to your collection.",
       );
-      setActionError(true);
     } finally {
-      setBusyId(null);
+      collectionSaveInProgress.current = false;
     }
+  };
+
+  const resolveDuplicate = async (
+    operation: (pending: CollectionItem) => Promise<unknown>,
+    message: (pending: CollectionItem) => string,
+  ) => {
+    if (!pendingCollectionItem || isResolvingDuplicate) {
+      return;
+    }
+    setIsResolvingDuplicate(true);
+    setDuplicateError(null);
+    try {
+      const cardId = pendingCollectionItem.card.id;
+      await operation(pendingCollectionItem);
+      await wishlistRepository.remove(cardId);
+      setCards((current: readonly Card[]) =>
+        current.filter((c: Card) => c.id !== cardId),
+      );
+      setActionMessage(message(pendingCollectionItem));
+      setActionError(false);
+      setPendingCollectionItem(null);
+      setDuplicateCandidates([]);
+    } catch (error) {
+      setDuplicateError(
+        error instanceof Error
+          ? error.message
+          : "The collection could not be updated.",
+      );
+    } finally {
+      setIsResolvingDuplicate(false);
+    }
+  };
+
+  const handleIncreaseDuplicate = (item: CollectionItem) => {
+    void resolveDuplicate(
+      (pending) =>
+        collectionRepository.incrementQuantity(item.id, pending.quantity),
+      (pending) =>
+        `${pending.card.name} quantity increased in Collection and removed from Wishlist.`,
+    );
+  };
+
+  const handleCreateSeparateEntry = () => {
+    void resolveDuplicate(
+      (pending) => collectionRepository.add(pending),
+      (pending) => `${pending.card.name} added as a separate Collection entry and removed from Wishlist.`,
+    );
+  };
+
+  const closeDuplicateModal = () => {
+    setPendingCollectionItem(null);
+    setDuplicateCandidates([]);
+    setDuplicateError(null);
   };
 
   if (isLoading) {
@@ -338,7 +424,7 @@ export default function WishlistScreen() {
                     label="Collect"
                     testID={`collect-card-${item.id}`}
                     disabled={busyId !== null}
-                    onPress={() => void moveToCollection(item)}
+                    onPress={() => handleOpenCollectModal(item)}
                   />
                   <WishlistAction
                     icon="trash-2"
@@ -353,6 +439,21 @@ export default function WishlistScreen() {
           )}
         />
       </View>
+      <AddToCollectionModal
+        card={collectionCard}
+        visible={collectionCard !== null}
+        onClose={closeCollectionModal}
+        onSave={(values) => void handleSaveToCollection(values)}
+      />
+      <CollectionDuplicateModal
+        items={duplicateCandidates}
+        visible={pendingCollectionItem !== null}
+        isSaving={isResolvingDuplicate}
+        error={duplicateError}
+        onIncrease={handleIncreaseDuplicate}
+        onCreateSeparate={handleCreateSeparateEntry}
+        onClose={closeDuplicateModal}
+      />
     </SafeAreaView>
   );
 }

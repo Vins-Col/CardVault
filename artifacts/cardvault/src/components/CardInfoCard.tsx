@@ -13,6 +13,19 @@ interface CardInfoCardProps {
   actions?: ReactNode;
 }
 
+export function getLanguageBadge(language: string): string {
+  const lower = language.toLowerCase();
+  if (lower.includes("english")) return "🇬🇧 English";
+  if (lower.includes("italian")) return "🇮🇹 Italian";
+  if (lower.includes("japanese")) return "🇯🇵 Japanese";
+  if (lower.includes("french")) return "🇫🇷 French";
+  if (lower.includes("german")) return "🇩🇪 German";
+  if (lower.includes("spanish")) return "🇪🇸 Spanish";
+  if (lower.includes("korean")) return "🇰🇷 Korean";
+  if (lower.includes("chinese")) return "🇨🇳 Chinese";
+  return `🌐 ${language}`;
+}
+
 export default function CardInfoCard({
   card,
   ownedLanguage,
@@ -55,7 +68,7 @@ export default function CardInfoCard({
             #{card.collectorNumber} · {card.setName}
           </Text>
           <Text style={[styles.metadata, { color: colors.mutedForeground }]}>
-            {card.rarity ?? "Rarity not listed"} · Catalog: {card.language}
+            {card.rarity ?? "Rarity not listed"} · {getLanguageBadge(card.language)}
           </Text>
           {ownedLanguage ? (
             <Text style={[styles.metadata, { color: colors.accent }]}>

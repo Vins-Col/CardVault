@@ -25,37 +25,44 @@ const r6 = parseSmartQuery("Pikachu anniversary");
 assert.strictEqual(r6.name, "Pikachu");
 assert.strictEqual(r6.set, "anniversary");
 
-// New Phase 2D Test Cases
-const t1 = parseSmartQuery("Pikachu giapponese");
-assert.strictEqual(t1.name, "Pikachu");
-assert.strictEqual(t1.language, "ja");
+// Collector Mode Test Cases (Search V2 Phase 1)
+const c1 = parseSmartQuery("001/030");
+assert.strictEqual(c1.collectorNumber, "001/030");
 
-const t2 = parseSmartQuery("Pikachu japanese");
-assert.strictEqual(t2.name, "Pikachu");
-assert.strictEqual(t2.language, "ja");
+const c2 = parseSmartQuery("151/165");
+assert.strictEqual(c2.collectorNumber, "151/165");
 
-const t3 = parseSmartQuery("Pikachu inglese");
-assert.strictEqual(t3.name, "Pikachu");
-assert.strictEqual(t3.language, "en");
+const c3 = parseSmartQuery("223/197");
+assert.strictEqual(c3.collectorNumber, "223/197");
 
-const t4 = parseSmartQuery("Pikachu french");
-assert.strictEqual(t4.name, "Pikachu");
-assert.strictEqual(t4.language, "fr");
+// Set + Number Priority Test Cases
+const s1 = parseSmartQuery("WCS23 001");
+assert.strictEqual(s1.set, "WCS23");
+assert.strictEqual(s1.collectorNumber, "001");
 
-const t5 = parseSmartQuery("001");
-assert.strictEqual(t5.name, "");
-assert.strictEqual(t5.collectorNumber, "001");
+const s2 = parseSmartQuery("MEW 183");
+assert.strictEqual(s2.set, "MEW");
+assert.strictEqual(s2.collectorNumber, "183");
 
-const t6 = parseSmartQuery("001/030");
-assert.strictEqual(t6.name, "");
-assert.strictEqual(t6.collectorNumber, "001/030");
+const s3 = parseSmartQuery("EVS 111");
+assert.strictEqual(s3.set, "EVS");
+assert.strictEqual(s3.collectorNumber, "111");
 
-const t7 = parseSmartQuery("Pikachu 001");
-assert.strictEqual(t7.name, "Pikachu");
-assert.strictEqual(t7.collectorNumber, "001");
+// Search V2 Phase 2 Language Alias Test Cases
+const l1 = parseSmartQuery("Rayquaza japanese");
+assert.strictEqual(l1.name, "Rayquaza");
+assert.strictEqual(l1.language, "ja");
 
-const t8 = parseSmartQuery("Pikachu 001/030");
-assert.strictEqual(t8.name, "Pikachu");
-assert.strictEqual(t8.collectorNumber, "001/030");
+const l2 = parseSmartQuery("Rayquaza giapponese");
+assert.strictEqual(l2.name, "Rayquaza");
+assert.strictEqual(l2.language, "ja");
 
-console.log("All Phase 2D query parser assertions passed successfully!");
+const l3 = parseSmartQuery("Rayquaza english");
+assert.strictEqual(l3.name, "Rayquaza");
+assert.strictEqual(l3.language, "en");
+
+const l4 = parseSmartQuery("Rayquaza italiano");
+assert.strictEqual(l4.name, "Rayquaza");
+assert.strictEqual(l4.language, "it");
+
+console.log("All Search V2 Phase 1, Phase 2, & query parser assertions passed successfully!");

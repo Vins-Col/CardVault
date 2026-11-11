@@ -11,6 +11,7 @@ export interface ParsedQuery {
 const LANGUAGE_MAP: Record<string, string> = {
   japanese: "ja",
   giapponese: "ja",
+  giaponese: "ja",
   jp: "ja",
   ja: "ja",
   english: "en",
@@ -70,9 +71,11 @@ const SET_KEYWORDS = new Set([
   "destinies",
   "zenith",
   "151",
+  "wcs23",
+  "evs",
 ]);
 
-const COLLECTOR_NUMBER_REGEX = /\b\d+(?:\/\d+)?\b/;
+const COLLECTOR_NUMBER_REGEX = /\b\d+(?:[\/\-]\d+)?\b/;
 
 export function parseSmartQuery(rawQuery: string): ParsedQuery {
   const raw = rawQuery.trim();
@@ -100,7 +103,7 @@ export function parseSmartQuery(rawQuery: string): ParsedQuery {
     }
   }
 
-  // 1. Extract collector number (e.g. 001/130 or 151)
+  // 1. Extract collector number (e.g. 001/130, 151/165, 001)
   const numMatch = workingQuery.match(COLLECTOR_NUMBER_REGEX);
   if (numMatch) {
     collectorNumber = numMatch[0];
@@ -129,9 +132,9 @@ export function parseSmartQuery(rawQuery: string): ParsedQuery {
       continue;
     }
 
-    // Check set
-    if (!set && SET_KEYWORDS.has(lowerToken)) {
-      set = lowerToken;
+    // Check set (known set keywords, or short alphanumeric set codes when collectorNumber is present)
+    if (!set && (SET_KEYWORDS.has(lowerToken) || (collectorNumber && /^[a-z0-9]{2,6}$/i.test(token)))) {
+      set = token;
       continue;
     }
 

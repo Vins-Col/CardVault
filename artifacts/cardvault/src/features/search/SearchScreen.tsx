@@ -19,8 +19,7 @@ import CardInfoCard from "@/src/components/CardInfoCard";
 import type { Card } from "@/src/models/card";
 import type { CollectionItem } from "@/src/models/collection-item";
 import { isSamePhysicalConfiguration } from "@/src/features/collection/collection-matching";
-import type { CardCatalogSearchField } from "@/src/providers/card-catalog-provider";
-import { getDefaultCardCatalogProvider } from "@/src/providers/catalog-registry";
+import { searchAllProviders, matchesCatalogLanguage } from "@/src/providers/provider-merge";
 import { parseSmartQuery } from "@/src/utils/query-parser";
 import type { ParsedQuery } from "@/src/utils/query-parser";
 import {
@@ -40,40 +39,22 @@ import {
 } from "@/src/services/ocr-service";
 import OcrConfirmationModal from "@/src/features/search/OcrConfirmationModal";
 
-const SEARCH_FIELDS: {
-  value: CardCatalogSearchField;
-  label: string;
-  placeholder: string;
-}[] = [
-  { value: "name", label: "Name", placeholder: "Search a card name" },
-  {
-    value: "collectorNumber",
-    label: "Number",
-    placeholder: "Search a collector number",
-  },
-  { value: "setName", label: "Set name", placeholder: "Search a set name" },
-  { value: "setCode", label: "Set code", placeholder: "Search a set code" },
-  { value: "rarity", label: "Rarity", placeholder: "Search a rarity" },
+const catalogLanguages = [
+  { code: "", label: "🌐 Any" },
+  { code: "en", label: "🇬🇧 EN" },
+  { code: "it", label: "🇮🇹 IT" },
+  { code: "ja", label: "🇯🇵 JP" },
+  { code: "fr", label: "🇫🇷 FR" },
+  { code: "de", label: "🇩🇪 DE" },
+  { code: "es", label: "🇪🇸 ES" },
+  { code: "ko", label: "🇰🇷 KO" },
+  { code: "zh-cn", label: "🇨🇳 CN" },
+  { code: "zh-tw", label: "🇹🇼 ZH" },
 ];
-
-const defaultProvider = getDefaultCardCatalogProvider();
-const catalogLanguages = defaultProvider.getSupportedLanguages();
 
 function createEntryId(): string {
   return `collection-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
-
-const LANGUAGE_CODE_TO_LABEL: Record<string, string> = {
-  ja: "Japanese",
-  en: "English",
-  fr: "French",
-  de: "German",
-  it: "Italian",
-  es: "Spanish",
-  ko: "Korean",
-  "zh-tw": "Chinese (Traditional)",
-  "zh-cn": "Chinese (Simplified)",
-};
 
 interface CollectorNumberInfo {
   variants: Set<string>;
@@ -112,15 +93,18 @@ function getCollectorNumberVariants(
 function filterAndRankCards(
   cards: readonly Card[],
   parsed: ParsedQuery,
+  catalogLanguage: string,
 ): readonly Card[] {
-  const { variants: targetVariants, baseNum, setSize, raw: targetRaw } = getCollectorNumberVariants(
+  const { baseNum, setSize, raw: targetRaw } = getCollectorNumberVariants(
     parsed.collectorNumber,
   );
 
+  const targetSet = parsed.set ? parsed.set.toLowerCase().trim() : null;
+  const targetName = parsed.name ? parsed.name.toLowerCase().trim() : null;
+
   if (parsed.collectorNumber) {
     console.log(
-      `[Collector Search Debug] Query: "${parsed.raw}" | Collector Number: "${parsed.collectorNumber}" | Variants generated:`,
-      Array.from(targetVariants),
+      `[Collector Search Debug] Query: "${parsed.raw}" | Collector Number: "${parsed.collectorNumber}" | Set: "${parsed.set}"`,
     );
   }
 
@@ -131,141 +115,108 @@ function filterAndRankCards(
     const cardNum = (card.collectorNumber ?? "").toLowerCase().trim();
     const cardInfo = getCollectorNumberVariants(card.collectorNumber);
 
-    // Priority A: Exact match or base + setSize match
+    // Priority A: Exact match or base + setSize match (Collector Mode primary identifier: 001/030, 151/165, 223/197)
     if (
       cardNum === targetRaw ||
       (setSize && cardInfo.baseNum === baseNum && cardInfo.setSize === setSize)
     ) {
       return 100;
     }
-    // Priority B: Base number / padded match (e.g. 001)
+    // Priority B: Base number / padded match (e.g. 001, 151, 223, 183, 111)
     if (
       cardNum === baseNum ||
       cardNum === cardInfo.baseNum ||
       cardNum === baseNum.padStart(3, "0")
     ) {
-      return 80;
+      return 85;
     }
     // Priority C: Integer match (e.g. 1)
     if (
       cardNum === String(Number(baseNum)) ||
       cardNum === String(Number(cardInfo.baseNum))
     ) {
-      return 40;
+      return 50;
     }
     // Substring match fallback
     if (cardNum.includes(baseNum) || targetRaw.includes(cardNum)) {
-      return 20;
+      return 25;
     }
     return 0;
   };
 
-  const nameFiltered = cards.filter((card) => {
-    if (!parsed.name) {
-      return true;
+  const getCardSetScore = (card: Card): number => {
+    if (!targetSet) {
+      return 0;
+    }
+    const setName = (card.setName ?? "").toLowerCase();
+    const setId = (card.setId ?? "").toLowerCase();
+    if (setId === targetSet || setName === targetSet) {
+      return 90;
+    }
+    if (setName.includes(targetSet) || setId.includes(targetSet) || targetSet.includes(setId)) {
+      return 70;
+    }
+    return 0;
+  };
+
+  const getCardNameScore = (card: Card): number => {
+    if (!targetName) {
+      return 30;
     }
     const cardName = (card.name ?? "").toLowerCase();
-    const targetName = parsed.name.toLowerCase();
-    return cardName.includes(targetName);
-  });
-
-  const matchesCollectorNumber = (card: Card): boolean => {
-    if (!parsed.collectorNumber) {
-      return false;
+    if (cardName === targetName) {
+      return 60;
     }
-    return getCardCollectorScore(card) > 0;
+    if (cardName.startsWith(targetName)) {
+      return 45;
+    }
+    if (cardName.includes(targetName)) {
+      return 30;
+    }
+    return 0;
   };
 
-  const matchesFacets = (card: Card): boolean => {
-    if (parsed.collectorNumber && !matchesCollectorNumber(card)) {
-      return false;
+  const getCardLanguageScore = (card: Card): number => {
+    if (!catalogLanguage || catalogLanguage === "any") {
+      return 0;
     }
-
-    if (parsed.rarity) {
-      const cardRarity = (card.rarity ?? "").toLowerCase();
-      const targetRarity = parsed.rarity.toLowerCase();
-      if (!cardRarity.includes(targetRarity)) {
-        return false;
-      }
-    }
-
-    if (parsed.set) {
-      const setName = (card.setName ?? "").toLowerCase();
-      const setId = (card.setId ?? "").toLowerCase();
-      const targetSet = parsed.set.toLowerCase();
-      if (!setName.includes(targetSet) && !setId.includes(targetSet)) {
-        return false;
-      }
-    }
-
-    if (parsed.language) {
-      const targetLangCode = parsed.language.toLowerCase();
-      const targetLangLabel = (
-        LANGUAGE_CODE_TO_LABEL[targetLangCode] ?? targetLangCode
-      ).toLowerCase();
-      const cardLang = (card.language ?? "").toLowerCase();
-      if (
-        !cardLang.includes(targetLangLabel) &&
-        !cardLang.includes(targetLangCode)
-      ) {
-        return false;
-      }
-    }
-
-    return true;
+    return matchesCatalogLanguage(card, catalogLanguage) ? 150 : 0;
   };
 
-  const targetName = (parsed.name ?? "").toLowerCase();
-  const cardScores = new Map<Card, { score: number; collectorScore: number; nameMatch: number }>();
+  const cardScores = new Map<Card, number>();
 
-  for (const card of nameFiltered) {
+  for (const card of cards) {
     const collectorScore = getCardCollectorScore(card);
-    const nameMatch = parsed.name
-      ? card.name.toLowerCase().includes(targetName)
-        ? 1
-        : 0
-      : 1;
-    const bothMatchBonus = collectorScore > 0 && nameMatch > 0 ? 50 : 0;
-    const score = collectorScore + nameMatch * 50 + bothMatchBonus;
-    cardScores.set(card, { score, collectorScore, nameMatch });
+    const setScore = getCardSetScore(card);
+    const nameScore = getCardNameScore(card);
+    const languageScore = getCardLanguageScore(card);
 
-    if (parsed.collectorNumber && collectorScore > 0) {
-      console.log(
-        `[Collector Search Debug] Card: ${card.id} (${card.name} #${card.collectorNumber}) | Collector Score: ${collectorScore} | Total Score: ${score}`,
-      );
+    let totalScore = collectorScore + setScore + nameScore + languageScore;
+
+    // Set + Number priority (e.g. WCS23 001, MEW 183, EVS 111 receive very high ranking scores)
+    if (parsed.collectorNumber && parsed.set && collectorScore > 0 && setScore > 0) {
+      totalScore += 250;
     }
+
+    // Name + Set + Number ranking
+    if (parsed.collectorNumber && parsed.set && parsed.name && collectorScore > 0 && setScore > 0 && nameScore > 0) {
+      totalScore += 200;
+    }
+
+    // Collector Mode boost for primary collector identifiers (001/030, 151/165, 223/197)
+    if (parsed.collectorNumber && collectorScore >= 85) {
+      totalScore += 100;
+    }
+
+    cardScores.set(card, totalScore);
   }
 
-  return [...nameFiltered].sort((a, b) => {
-    const scoreA = cardScores.get(a)?.score ?? 0;
-    const scoreB = cardScores.get(b)?.score ?? 0;
+  return [...cards].sort((a, b) => {
+    const scoreA = cardScores.get(a) ?? 0;
+    const scoreB = cardScores.get(b) ?? 0;
     if (scoreA !== scoreB) {
       return scoreB - scoreA;
     }
-
-    const aMatch = matchesFacets(a) ? 1 : 0;
-    const bMatch = matchesFacets(b) ? 1 : 0;
-    if (aMatch !== bMatch) {
-      return bMatch - aMatch;
-    }
-
-    if (targetName) {
-      const aName = a.name.toLowerCase();
-      const bName = b.name.toLowerCase();
-
-      const aExact = aName === targetName ? 1 : 0;
-      const bExact = bName === targetName ? 1 : 0;
-      if (aExact !== bExact) {
-        return bExact - aExact;
-      }
-
-      const aStarts = aName.startsWith(targetName) ? 1 : 0;
-      const bStarts = bName.startsWith(targetName) ? 1 : 0;
-      if (aStarts !== bStarts) {
-        return bStarts - aStarts;
-      }
-    }
-
     return 0;
   });
 }
@@ -273,8 +224,6 @@ function filterAndRankCards(
 export default function SearchScreen() {
   const colors = useColors();
   const [query, setQuery] = useState("");
-  const [searchField, setSearchField] =
-    useState<CardCatalogSearchField>("name");
   const [catalogLanguage, setCatalogLanguage] = useState(
     catalogLanguages[0]?.code ?? "",
   );
@@ -352,8 +301,14 @@ export default function SearchScreen() {
   const collectionSaveInProgress = useRef(false);
 
   useEffect(() => {
+    const parsed = parseSmartQuery(query);
+    if (parsed.language && parsed.language !== catalogLanguage) {
+      setCatalogLanguage(parsed.language);
+      return;
+    }
+
     const term = query.trim();
-    if (term.length < 2 || !catalogLanguage) {
+    if (term.length < 2) {
       requestId.current += 1;
       setResults([]);
       setIsLoading(false);
@@ -372,21 +327,17 @@ export default function SearchScreen() {
       setIsLoading(true);
 
       try {
-        const parsed = parseSmartQuery(query);
-        const effectiveField = searchField;
         const effectiveQuery = parsed.name || query.trim();
-
         const effectiveLanguage = catalogLanguage;
 
-        const provider = getDefaultCardCatalogProvider();
-        const cards = await provider.searchCards(effectiveQuery, {
-          field: effectiveField,
+        const cards = await searchAllProviders(effectiveQuery, {
+          field: "name",
           catalogLanguage: effectiveLanguage,
           signal: controller.signal,
           parsedQuery: parsed,
         });
 
-        const rankedCards = filterAndRankCards(cards, parsed);
+        const rankedCards = filterAndRankCards(cards, parsed, catalogLanguage);
 
         if (currentRequest === requestId.current) {
           setResults(rankedCards);
@@ -416,11 +367,8 @@ export default function SearchScreen() {
       controller.abort();
       requestId.current += 1;
     };
-  }, [catalogLanguage, query, retryCount, searchField]);
+  }, [catalogLanguage, query, retryCount]);
 
-  const activeField =
-    SEARCH_FIELDS.find((field) => field.value === searchField) ??
-    SEARCH_FIELDS[0];
   const selectedCatalogLanguage =
     catalogLanguages.find((language) => language.code === catalogLanguage)
       ?.label ?? "Unknown";
@@ -610,8 +558,7 @@ export default function SearchScreen() {
             No cards found
           </Text>
           <Text style={[styles.stateBody, { color: colors.mutedForeground }]}>
-            No matches for “{query.trim()}” in {activeField.label.toLowerCase()}{" "}
-            using {selectedCatalogLanguage} catalog data.
+            No matches for “{query.trim()}” using {selectedCatalogLanguage} catalog data.
           </Text>
         </View>
       );
@@ -708,7 +655,7 @@ export default function SearchScreen() {
             testID="card-search-input"
             value={query}
             onChangeText={setQuery}
-            placeholder={activeField.placeholder}
+            placeholder="Search name, collector number, set, or rarity..."
             placeholderTextColor={colors.mutedForeground}
             style={[styles.input, { color: colors.foreground }]}
             returnKeyType="search"
@@ -732,50 +679,6 @@ export default function SearchScreen() {
             </Pressable>
           ) : null}
         </View>
-
-        <Text style={[styles.filterLabel, { color: colors.foreground }]}>
-          Search by
-        </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRow}
-        >
-          {SEARCH_FIELDS.map((field) => {
-            const selected = searchField === field.value;
-            return (
-              <Pressable
-                key={field.value}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                testID={`search-field-${field.value}`}
-                onPress={() => setSearchField(field.value)}
-                style={[
-                  styles.filterChip,
-                  {
-                    backgroundColor: selected
-                      ? `${colors.primary}22`
-                      : colors.card,
-                    borderColor: selected ? colors.primary : colors.border,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.filterChipLabel,
-                    {
-                      color: selected
-                        ? colors.primary
-                        : colors.secondaryForeground,
-                    },
-                  ]}
-                >
-                  {field.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
 
         <Text style={[styles.filterLabel, { color: colors.foreground }]}>
           Catalog language
