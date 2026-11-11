@@ -15,6 +15,8 @@ import { useColors } from "@/hooks/useColors";
 import { OWNED_CARD_LANGUAGES } from "@/src/models/owned-card-language";
 import type { OwnedCardLanguage } from "@/src/models/owned-card-language";
 import type { Card } from "@/src/models/card";
+import { PrimaryButton } from "@/src/components/ui/PrimaryButton";
+import { spacing } from "@/src/theme/spacing";
 
 const CONDITIONS = [
   "Mint",
@@ -480,18 +482,12 @@ export default function AddToCollectionModal({
               ]}
             />
 
-            <Pressable
-              accessibilityRole="button"
-              testID="save-to-collection"
+            <PrimaryButton
+              title="Save card"
               onPress={handleSubmit}
-              style={[styles.saveButton, { backgroundColor: colors.primary }]}
-            >
-              <Text
-                style={[styles.saveLabel, { color: colors.primaryForeground }]}
-              >
-                Save card
-              </Text>
-            </Pressable>
+              testID="save-to-collection"
+              style={{ marginTop: spacing.md, marginBottom: spacing.sm }}
+            />
           </KeyboardAwareScrollViewCompat>
         </SafeAreaView>
       </View>

@@ -1,7 +1,6 @@
 import React from "react";
 import { Feather } from "@expo/vector-icons";
 import {
-  ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
@@ -12,6 +11,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import type { CollectionItem } from "@/src/models/collection-item";
+import { AppCard } from "@/src/components/ui/AppCard";
+import { PrimaryButton } from "@/src/components/ui/PrimaryButton";
+import { spacing } from "@/src/theme/spacing";
+import { typography } from "@/src/theme/typography";
 
 interface CollectionDuplicateModalProps {
   items: readonly CollectionItem[];
@@ -46,7 +49,7 @@ export default function CollectionDuplicateModal({
           edges={["top", "bottom"]}
           style={[
             styles.dialog,
-            { backgroundColor: colors.background, borderColor: colors.border },
+            { backgroundColor: colors.background, borderColor: colors.border, borderRadius: colors.radius },
           ]}
         >
           <View style={styles.headingRow}>
@@ -67,55 +70,40 @@ export default function CollectionDuplicateModal({
             contentContainerStyle={styles.matchesContent}
           >
             {items.map((item) => (
-              <View
+              <AppCard
                 key={item.id}
-                style={[
-                  styles.matchRow,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                ]}
+                style={{
+                  borderRadius: colors.radius,
+                  padding: spacing.md,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: spacing.sm,
+                }}
               >
                 <View style={styles.matchCopy}>
                   <Text
                     numberOfLines={1}
-                    style={[styles.matchName, { color: colors.foreground }]}
+                    style={[styles.matchName, { color: colors.foreground, fontFamily: typography.fonts.semiBold }]}
                   >
                     {item.card.name}
                   </Text>
                   <Text
-                    style={[styles.matchMeta, { color: colors.mutedForeground }]}
+                    style={[styles.matchMeta, { color: colors.mutedForeground, fontFamily: typography.fonts.regular }]}
                   >
                     {item.language} · {item.variant ?? "Variant not specified"} ·{" "}
                     {item.condition} · Qty {item.quantity}
                   </Text>
                 </View>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Increase quantity for ${item.card.name}`}
-                  testID={`increase-duplicate-${item.id}`}
+                <PrimaryButton
+                  title={isSaving ? "..." : "Increase"}
                   disabled={isSaving}
                   onPress={() => onIncrease(item)}
-                  style={[
-                    styles.increaseButton,
-                    {
-                      backgroundColor: colors.primary,
-                      opacity: isSaving ? 0.65 : 1,
-                    },
-                  ]}
-                >
-                  {isSaving ? (
-                    <ActivityIndicator color={colors.primaryForeground} />
-                  ) : (
-                    <Text
-                      style={[
-                        styles.increaseLabel,
-                        { color: colors.primaryForeground },
-                      ]}
-                    >
-                      Increase
-                    </Text>
-                  )}
-                </Pressable>
-              </View>
+                  testID={`increase-duplicate-${item.id}`}
+                  style={{ paddingVertical: 8, paddingHorizontal: 14, minHeight: 38 }}
+                  textStyle={{ fontSize: 13 }}
+                />
+              </AppCard>
             ))}
           </ScrollView>
 
@@ -128,29 +116,19 @@ export default function CollectionDuplicateModal({
             </Text>
           ) : null}
 
-          <Pressable
-            accessibilityRole="button"
-            testID="create-separate-collection-entry"
+          <PrimaryButton
+            title="Create a separate entry"
             disabled={isSaving}
             onPress={onCreateSeparate}
-            style={[
-              styles.separateButton,
-              {
-                backgroundColor: colors.secondary,
-                borderColor: colors.border,
-                opacity: isSaving ? 0.65 : 1,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.separateLabel,
-                { color: colors.secondaryForeground },
-              ]}
-            >
-              Create a separate entry
-            </Text>
-          </Pressable>
+            testID="create-separate-collection-entry"
+            style={{
+              backgroundColor: colors.secondary,
+              borderColor: colors.border,
+              borderWidth: 1,
+              marginTop: spacing.md,
+            }}
+            textStyle={{ color: colors.secondaryForeground }}
+          />
           <Pressable
             accessibilityRole="button"
             testID="cancel-duplicate-entry"

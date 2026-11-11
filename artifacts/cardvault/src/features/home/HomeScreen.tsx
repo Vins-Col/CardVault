@@ -18,6 +18,10 @@ import {
   wishlistRepository,
 } from "@/src/repositories/repository-registry";
 import { calculateCollectionValuation } from "@/src/utils/valuation";
+import { AppCard } from "@/src/components/ui/AppCard";
+import { StatCard } from "@/src/components/ui/StatCard";
+import { spacing } from "@/src/theme/spacing";
+import { typography } from "@/src/theme/typography";
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -118,18 +122,13 @@ export default function HomeScreen() {
           Summary of your collection and vault.
         </Text>
 
-        <View
-          style={[
-            styles.valuationCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}
-        >
+        <AppCard style={{ marginTop: spacing.md, marginBottom: spacing.md, padding: spacing.lg, borderRadius: 16 }}>
           <View style={styles.valuationHeader}>
             <View>
-              <Text style={[styles.valuationLabel, { color: colors.mutedForeground }]}>
+              <Text style={[styles.valuationLabel, { color: colors.mutedForeground, fontFamily: typography.fonts.medium, fontSize: typography.sizes.sm }]}>
                 Collection Value
               </Text>
-              <Text style={[styles.valuationTotal, { color: colors.foreground }]}>
+              <Text style={[styles.valuationTotal, { color: colors.foreground, fontFamily: typography.fonts.bold, fontSize: 26 }]}>
                 € {valuation.totalValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </Text>
             </View>
@@ -142,66 +141,42 @@ export default function HomeScreen() {
 
           <View style={styles.valuationGrid}>
             <View style={styles.valuationMetric}>
-              <Text style={[styles.metricLabel, { color: colors.mutedForeground }]}>
+              <Text style={[styles.metricLabel, { color: colors.mutedForeground, fontFamily: typography.fonts.regular, fontSize: typography.sizes.xs }]}>
                 Total Cards
               </Text>
-              <Text style={[styles.metricValue, { color: colors.foreground }]}>
+              <Text style={[styles.metricValue, { color: colors.foreground, fontFamily: typography.fonts.semiBold, fontSize: typography.sizes.md }]}>
                 {valuation.totalCards}
               </Text>
             </View>
             <View style={styles.valuationMetric}>
-              <Text style={[styles.metricLabel, { color: colors.mutedForeground }]}>
+              <Text style={[styles.metricLabel, { color: colors.mutedForeground, fontFamily: typography.fonts.regular, fontSize: typography.sizes.xs }]}>
                 Average Card
               </Text>
-              <Text style={[styles.metricValue, { color: colors.foreground }]}>
+              <Text style={[styles.metricValue, { color: colors.foreground, fontFamily: typography.fonts.semiBold, fontSize: typography.sizes.md }]}>
                 € {valuation.averageCardValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </Text>
             </View>
           </View>
-        </View>
+        </AppCard>
 
         <View style={styles.row}>
-          <View
-            style={[
-              styles.infoCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}
-          >
-            <View style={[styles.iconContainer, { backgroundColor: colors.secondary }]}>
-              <Feather name="award" size={18} color={colors.primary} />
-            </View>
-            <Text style={[styles.infoCardLabel, { color: colors.mutedForeground }]}>
-              Most Valuable Card
-            </Text>
-            <Text numberOfLines={1} style={[styles.infoCardTitle, { color: colors.foreground }]}>
-              {valuation.mostValuableCard ? valuation.mostValuableCard.name : "None"}
-            </Text>
-            <Text style={[styles.infoCardSubTitle, { color: colors.mutedForeground }]}>
-              {valuation.mostValuableCard
+          <StatCard
+            label="Most Valuable Card"
+            value={valuation.mostValuableCard ? valuation.mostValuableCard.name : "None"}
+            subtext={
+              valuation.mostValuableCard
                 ? `€ ${valuation.mostValuableCard.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                : "€ 0.00"}
-            </Text>
-          </View>
+                : "€ 0.00"
+            }
+            style={{ borderRadius: 16, padding: spacing.lg }}
+          />
 
-          <View
-            style={[
-              styles.infoCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}
-          >
-            <View style={[styles.iconContainer, { backgroundColor: colors.secondary }]}>
-              <Feather name="heart" size={18} color={colors.accent} />
-            </View>
-            <Text style={[styles.infoCardLabel, { color: colors.mutedForeground }]}>
-              Wishlist Items
-            </Text>
-            <Text style={[styles.infoCardTitle, { color: colors.foreground }]}>
-              {wishlistCount}
-            </Text>
-            <Text style={[styles.infoCardSubTitle, { color: colors.mutedForeground }]}>
-              Saved to wishlist
-            </Text>
-          </View>
+          <StatCard
+            label="Wishlist Items"
+            value={wishlistCount}
+            subtext="Saved to wishlist"
+            style={{ borderRadius: 16, padding: spacing.lg }}
+          />
         </View>
 
         <Pressable
@@ -213,6 +188,8 @@ export default function HomeScreen() {
             {
               backgroundColor: colors.card,
               borderColor: colors.border,
+              borderRadius: 16,
+              padding: spacing.lg,
               opacity: pressed ? 0.85 : 1,
             },
           ]}
@@ -221,10 +198,10 @@ export default function HomeScreen() {
             <Feather name="bar-chart-2" size={18} color={colors.primary} />
           </View>
           <View style={styles.statsBannerText}>
-            <Text style={[styles.statsBannerTitle, { color: colors.foreground }]}>
+            <Text style={[styles.statsBannerTitle, { color: colors.foreground, fontFamily: typography.fonts.semiBold, fontSize: typography.sizes.lg }]}>
               Collection Statistics
             </Text>
-            <Text style={[styles.statsBannerSub, { color: colors.mutedForeground }]}>
+            <Text style={[styles.statsBannerSub, { color: colors.mutedForeground, fontFamily: typography.fonts.regular, fontSize: typography.sizes.xs }]}>
               Set breakdowns, language, and rarity insights
             </Text>
           </View>

@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Feather } from "@expo/vector-icons";
 import {
-  ActivityIndicator,
   Image,
   Modal,
   Pressable,
@@ -13,6 +12,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import type { Card } from "@/src/models/card";
+import { AppCard } from "@/src/components/ui/AppCard";
+import { SectionTitle } from "@/src/components/ui/SectionTitle";
+import { PrimaryButton } from "@/src/components/ui/PrimaryButton";
+import { spacing } from "@/src/theme/spacing";
 
 export interface WishlistActionResult {
   message: string;
@@ -93,7 +96,7 @@ export default function CardDetailsModal({
               <View
                 style={[
                   styles.imagePlaceholder,
-                  { backgroundColor: colors.card },
+                  { backgroundColor: colors.card, borderRadius: colors.radius },
                 ]}
               >
                 <Feather
@@ -116,11 +119,9 @@ export default function CardDetailsModal({
             <DetailRow label="Catalog language" value={card.language} />
             {card.cardmarketPrices || card.tcgplayerPrices ? (
               <View style={styles.pricingSection}>
-                <Text style={[styles.pricingSectionTitle, { color: colors.foreground }]}>
-                  Pricing
-                </Text>
+                <SectionTitle>Pricing</SectionTitle>
                 {card.cardmarketPrices && (
-                  <View style={[styles.priceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <AppCard style={{ borderRadius: colors.radius, padding: spacing.md, gap: spacing.xs }}>
                     <Text style={[styles.priceSourceHeader, { color: colors.foreground }]}>
                       Cardmarket (EUR)
                     </Text>
@@ -133,10 +134,10 @@ export default function CardDetailsModal({
                     {card.cardmarketPrices.lowPrice != null && (
                       <DetailRow label="Low Price" value={`€${card.cardmarketPrices.lowPrice.toFixed(2)}`} />
                     )}
-                  </View>
+                  </AppCard>
                 )}
                 {card.tcgplayerPrices && (
-                  <View style={[styles.priceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <AppCard style={{ borderRadius: colors.radius, padding: spacing.md, gap: spacing.xs }}>
                     <Text style={[styles.priceSourceHeader, { color: colors.foreground }]}>
                       TCGPlayer (USD)
                     </Text>
@@ -149,7 +150,7 @@ export default function CardDetailsModal({
                     {card.tcgplayerPrices.mid != null && (
                       <DetailRow label="Mid Price" value={`$${card.tcgplayerPrices.mid.toFixed(2)}`} />
                     )}
-                  </View>
+                  </AppCard>
                 )}
               </View>
             ) : null}
@@ -170,40 +171,13 @@ export default function CardDetailsModal({
                 {wishlistResult.message}
               </Text>
             ) : null}
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Add card to Wishlist"
-              testID="details-add-to-wishlist"
+            <PrimaryButton
+              title="Add to Wishlist"
               disabled={isAddingToWishlist}
               onPress={() => void handleAddToWishlist()}
-              style={[
-                styles.wishlistButton,
-                {
-                  backgroundColor: colors.primary,
-                  opacity: isAddingToWishlist ? 0.7 : 1,
-                },
-              ]}
-            >
-              {isAddingToWishlist ? (
-                <ActivityIndicator color={colors.primaryForeground} />
-              ) : (
-                <>
-                  <Feather
-                    name="heart"
-                    size={17}
-                    color={colors.primaryForeground}
-                  />
-                  <Text
-                    style={[
-                      styles.wishlistButtonLabel,
-                      { color: colors.primaryForeground },
-                    ]}
-                  >
-                    Add to Wishlist
-                  </Text>
-                </>
-              )}
-            </Pressable>
+              testID="details-add-to-wishlist"
+              style={{ marginTop: spacing.md }}
+            />
           </ScrollView>
         </SafeAreaView>
       ) : null}

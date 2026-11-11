@@ -15,6 +15,10 @@ import { useColors } from "@/hooks/useColors";
 import type { CollectionItem } from "@/src/models/collection-item";
 import { collectionRepository } from "@/src/repositories/repository-registry";
 import { calculateCollectionStatistics } from "@/src/utils/statistics";
+import { AppCard } from "@/src/components/ui/AppCard";
+import { StatCard } from "@/src/components/ui/StatCard";
+import { SectionTitle } from "@/src/components/ui/SectionTitle";
+import { spacing } from "@/src/theme/spacing";
 
 export default function StatisticsScreen() {
   const colors = useColors();
@@ -127,75 +131,35 @@ export default function StatisticsScreen() {
 
         {/* Summary Insights */}
         <View style={styles.insightsRow}>
-          <View
-            style={[
-              styles.insightCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}
-          >
-            <Feather name="layers" size={18} color={colors.primary} style={styles.insightIcon} />
-            <Text style={[styles.insightLabel, { color: colors.mutedForeground }]}>
-              Most Collected Set
-            </Text>
-            <Text numberOfLines={1} style={[styles.insightValue, { color: colors.foreground }]}>
-              {stats.mostCollectedSet ? stats.mostCollectedSet.name : "None"}
-            </Text>
-            <Text style={[styles.insightSub, { color: colors.mutedForeground }]}>
-              {stats.mostCollectedSet ? `${stats.mostCollectedSet.count} cards` : ""}
-            </Text>
-          </View>
+          <StatCard
+            label="Most Collected Set"
+            value={stats.mostCollectedSet ? stats.mostCollectedSet.name : "None"}
+            subtext={stats.mostCollectedSet ? `${stats.mostCollectedSet.count} cards` : ""}
+            style={{ borderRadius: 16, padding: spacing.lg }}
+          />
 
-          <View
-            style={[
-              styles.insightCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}
-          >
-            <Feather name="globe" size={18} color={colors.accent} style={styles.insightIcon} />
-            <Text style={[styles.insightLabel, { color: colors.mutedForeground }]}>
-              Common Language
-            </Text>
-            <Text numberOfLines={1} style={[styles.insightValue, { color: colors.foreground }]}>
-              {stats.mostCommonLanguage ? stats.mostCommonLanguage.language : "None"}
-            </Text>
-            <Text style={[styles.insightSub, { color: colors.mutedForeground }]}>
-              {stats.mostCommonLanguage ? `${stats.mostCommonLanguage.count} cards` : ""}
-            </Text>
-          </View>
+          <StatCard
+            label="Common Language"
+            value={stats.mostCommonLanguage ? stats.mostCommonLanguage.language : "None"}
+            subtext={stats.mostCommonLanguage ? `${stats.mostCommonLanguage.count} cards` : ""}
+            style={{ borderRadius: 16, padding: spacing.lg }}
+          />
         </View>
 
-        <View
-          style={[
-            styles.insightCardFull,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}
-        >
-          <Feather name="trending-up" size={18} color={colors.accent} style={styles.insightIcon} />
-          <Text style={[styles.insightLabel, { color: colors.mutedForeground }]}>
-            Most Valuable Set
-          </Text>
-          <Text numberOfLines={1} style={[styles.insightValue, { color: colors.foreground }]}>
-            {stats.mostValuableSet ? stats.mostValuableSet.name : "None"}
-          </Text>
-          <Text style={[styles.insightSub, { color: colors.foreground }]}>
-            {stats.mostValuableSet
+        <StatCard
+          label="Most Valuable Set"
+          value={stats.mostValuableSet ? stats.mostValuableSet.name : "None"}
+          subtext={
+            stats.mostValuableSet
               ? `€ ${stats.mostValuableSet.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-              : "€ 0.00"}
-          </Text>
-        </View>
+              : "€ 0.00"
+          }
+          style={{ borderRadius: 16, padding: spacing.lg, marginBottom: spacing.xl }}
+        />
 
         {/* Top Sets */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-            Top Sets (Top 10)
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.tableCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}
-        >
+        <SectionTitle>Top Sets (Top 10)</SectionTitle>
+        <AppCard style={{ borderRadius: 16, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, marginBottom: spacing.xl }}>
           {stats.topSets.length === 0 ? (
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
               No sets recorded yet.
@@ -223,20 +187,11 @@ export default function StatisticsScreen() {
               </View>
             ))
           )}
-        </View>
+        </AppCard>
 
         {/* Cards by Language */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-            Cards by Language
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.tableCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}
-        >
+        <SectionTitle>Cards by Language</SectionTitle>
+        <AppCard style={{ borderRadius: 16, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, marginBottom: spacing.xl }}>
           {Object.keys(stats.byLanguage).length === 0 ? (
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
               No language data recorded.
@@ -259,20 +214,11 @@ export default function StatisticsScreen() {
               </View>
             ))
           )}
-        </View>
+        </AppCard>
 
         {/* Cards by Rarity */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-            Cards by Rarity
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.tableCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}
-        >
+        <SectionTitle>Cards by Rarity</SectionTitle>
+        <AppCard style={{ borderRadius: 16, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, marginBottom: spacing.xl }}>
           {Object.keys(stats.byRarity).length === 0 ? (
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
               No rarity data recorded.
@@ -295,7 +241,7 @@ export default function StatisticsScreen() {
               </View>
             ))
           )}
-        </View>
+        </AppCard>
       </ScrollView>
     </SafeAreaView>
   );
