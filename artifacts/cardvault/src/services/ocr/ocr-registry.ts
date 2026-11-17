@@ -11,6 +11,6 @@ export function getOcrProvider(): OcrProvider {
   return activeProvider;
 }
 
-export async function extractCardFromImage(imageUri: string): Promise<OcrResult> {
-  return activeProvider.extractText(imageUri);
+export async function extractCardFromImage(imageUri: string, width?: number, height?: number): Promise<OcrResult> {
+  return activeProvider.extractText(imageUri, width, height);
 }

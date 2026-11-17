@@ -245,10 +245,10 @@ export default function SearchScreen() {
     if (Platform.OS === "web") {
       setIsScanning(true);
       try {
-        const uri = await takePhotoWithCamera();
-        if (uri) {
-          const extracted = await extractCardFromImage(uri);
-          setScannedImageUri(uri);
+        const res = await takePhotoWithCamera();
+        if (res) {
+          const extracted = await extractCardFromImage(res.croppedUri, res.width, res.height);
+          setScannedImageUri(res.croppedUri);
           setExtractedCard(extracted);
         }
       } catch (e) {
@@ -264,10 +264,10 @@ export default function SearchScreen() {
   const handleScanGallery = async () => {
     setIsScanning(true);
     try {
-      const uri = await pickImageFromGallery();
-      if (uri) {
-        const extracted = await extractCardFromImage(uri);
-        setScannedImageUri(uri);
+      const res = await pickImageFromGallery();
+      if (res) {
+        const extracted = await extractCardFromImage(res.croppedUri, res.width, res.height);
+        setScannedImageUri(res.croppedUri);
         setExtractedCard(extracted);
       }
     } catch (e) {
@@ -839,11 +839,11 @@ export default function SearchScreen() {
       <CameraScreen
         visible={isCameraOpen}
         onClose={() => setIsCameraOpen(false)}
-        onCapture={async (croppedUri) => {
+        onCapture={async (croppedUri, width, height) => {
           setIsCameraOpen(false);
           setIsScanning(true);
           try {
-            const extracted = await extractCardFromImage(croppedUri);
+            const extracted = await extractCardFromImage(croppedUri, width, height);
             setScannedImageUri(croppedUri);
             setExtractedCard(extracted);
           } catch (e) {

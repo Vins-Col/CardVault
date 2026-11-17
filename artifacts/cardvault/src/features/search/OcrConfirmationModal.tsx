@@ -84,12 +84,14 @@ export default function OcrConfirmationModal({
             keyboardShouldPersistTaps="handled"
           >
             {imageUri ? (
-              <Image
-                accessibilityLabel="Scanned card preview"
-                source={{ uri: imageUri }}
-                resizeMode="contain"
-                style={styles.image}
-              />
+              <View style={styles.imageContainer}>
+                <Image
+                  accessibilityLabel="Scanned card preview"
+                  source={{ uri: imageUri }}
+                  resizeMode="contain"
+                  style={styles.image}
+                />
+              </View>
             ) : null}
 
             {isLowConfidence ? (
@@ -214,11 +216,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 40,
   },
-  image: {
+  imageContainer: {
     width: "100%",
-    height: 220,
+    height: 320,
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 16,
     borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "rgba(0,0,0,0.03)",
+  },
+  image: {
+    width: "100%",
+    height: "100%",
   },
   warningBox: {
     borderRadius: 12,

@@ -1,0 +1,32 @@
+{
+  "templateId": "pokemon-modern-ref-v1",
+  "gameId": "pokemon",
+  "layoutName": "PokemonModern",
+  "referenceImage": "pokemon-modern-reference.jpg",
+  "version": "1.0.0",
+  "calibratedAt": "2026-01-12T00:00:00.000Z",
+  "cardNameRegion": {
+    "x": 0.04,
+    "y": 0.02,
+    "width": 0.72,
+    "height": 0.18
+  },
+  "hpRegion": {
+    "x": 0.75,
+    "y": 0.02,
+    "width": 0.22,
+    "height": 0.12
+  },
+  "setCodeRegion": {
+    "x": 0.35,
+    "y": 0.85,
+    "width": 0.35,
+    "height": 0.15
+  },
+  "collectorNumberRegion": {
+    "x": 0.65,
+    "y": 0.85,
+    "width": 0.32,
+    "height": 0.15
+  }
+}

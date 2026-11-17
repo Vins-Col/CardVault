@@ -11,13 +11,12 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import CardCaptureOverlay from "@/src/components/CardCaptureOverlay";
-import { pickImageFromGallery } from "@/src/services/ocr/image-acquisition";
-import * as ImageManipulator from "expo-image-manipulator";
+import { pickImageFromGallery, processCapturedImageUri } from "@/src/services/ocr/image-acquisition";
 
 interface CameraScreenProps {
   visible: boolean;
   onClose: () => void;
-  onCapture: (croppedUri: string) => void;
+  onCapture: (croppedUri: string, width: number, height: number) => void;
 }
 
 export default function CameraScreen({
@@ -62,53 +61,6 @@ export default function CameraScreen({
     );
   }
 
-  const processAndCropImage = async (uri: string, width?: number, height?: number) => {
-    const origWidth = width ?? 1000;
-    const origHeight = height ?? 1400;
-    const targetAspect = 2.5 / 3.5;
-    let cropWidth = origWidth;
-    let cropHeight = origHeight;
-    let cropX = 0;
-    let cropY = 0;
-
-    if (origWidth / origHeight > targetAspect) {
-      cropHeight = origHeight;
-      cropWidth = Math.round(origHeight * targetAspect);
-      cropX = Math.round((origWidth - cropWidth) / 2);
-    } else {
-      cropWidth = origWidth;
-      cropHeight = Math.round(origWidth / targetAspect);
-      cropY = Math.round((origHeight - cropHeight) / 2);
-    }
-
-    let croppedUri = uri;
-    try {
-      const manipResult = await ImageManipulator.manipulateAsync(
-        uri,
-        [
-          {
-            crop: {
-              originX: cropX,
-              originY: cropY,
-              width: cropWidth,
-              height: cropHeight,
-            },
-          },
-        ],
-        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
-      );
-      croppedUri = manipResult.uri;
-    } catch {
-      croppedUri = uri;
-    }
-
-    console.log(
-      `[Camera V3] original image size: ${origWidth}x${origHeight}, original URI: ${uri}, cropped image size: ${cropWidth}x${cropHeight}, cropped URI: ${croppedUri}`,
-    );
-
-    return croppedUri;
-  };
-
   const handleCapturePhoto = async () => {
     if (!cameraRef.current || isProcessing) return;
     setIsProcessing(true);
@@ -120,12 +72,12 @@ export default function CameraScreen({
       if (!photo || !photo.uri) {
         throw new Error("Failed to capture photo.");
       }
-      const croppedUri = await processAndCropImage(
+      const res = await processCapturedImageUri(
         photo.uri,
         photo.width,
         photo.height,
       );
-      onCapture(croppedUri);
+      onCapture(res.croppedUri, res.width, res.height);
     } catch (e) {
       Alert.alert(
         "Camera Error",
@@ -140,10 +92,9 @@ export default function CameraScreen({
     if (isProcessing) return;
     setIsProcessing(true);
     try {
-      const uri = await pickImageFromGallery();
-      if (uri) {
-        const croppedUri = await processAndCropImage(uri, 1000, 1400);
-        onCapture(croppedUri);
+      const res = await pickImageFromGallery();
+      if (res) {
+        onCapture(res.croppedUri, res.width, res.height);
       }
     } catch (e) {
       Alert.alert(
@@ -158,9 +109,10 @@ export default function CameraScreen({
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.container}>
-        <CameraView style={styles.camera} ref={cameraRef}>
-          <CardCaptureOverlay visible={true} />
+        <CameraView style={styles.camera} ref={cameraRef} />
+        <CardCaptureOverlay visible={true} />
 
+        <View style={styles.overlayContainer} pointerEvents="box-none">
           {/* Top Header Controls */}
           <View style={styles.topBar}>
             <Pressable
@@ -205,7 +157,7 @@ export default function CameraScreen({
 
             <View style={styles.spacerButton} />
           </View>
-        </CameraView>
+        </View>
       </View>
     </Modal>
   );
@@ -217,8 +169,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#000000",
   },
   camera: {
-    flex: 1,
-    width: "100%",
+    ...StyleSheet.absoluteFill,
+  },
+  overlayContainer: {
+    ...StyleSheet.absoluteFill,
     justifyContent: "space-between",
   },
   topBar: {

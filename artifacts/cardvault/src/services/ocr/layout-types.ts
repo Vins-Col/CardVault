@@ -1,4 +1,13 @@
 export type GameId = "pokemon" | "yugioh" | "mtg" | "onepiece";
+export type LayoutName =
+  | "PokemonModern"
+  | "PokemonEX"
+  | "PokemonV"
+  | "PokemonClassic"
+  | "PokemonVintage"
+  | "YugiohModern"
+  | "MtgModern"
+  | "OnePieceModern";
 
 export interface LayoutRegion {
   x: number; // normalized 0 to 1
@@ -9,8 +18,10 @@ export interface LayoutRegion {
 
 export interface CardLayout {
   gameId: GameId;
-  layoutName: string;
-  nameRegion: LayoutRegion;
+  layoutName: LayoutName;
+  cardNameRegion: LayoutRegion;
+  hpRegion: LayoutRegion;
   setCodeRegion: LayoutRegion;
   collectorNumberRegion: LayoutRegion;
+  nameRegion?: LayoutRegion; // Backward compatibility alias
 }

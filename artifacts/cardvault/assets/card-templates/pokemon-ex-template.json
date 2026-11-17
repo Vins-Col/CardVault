@@ -1,0 +1,32 @@
+{
+  "templateId": "pokemon-ex-ref-v1",
+  "gameId": "pokemon",
+  "layoutName": "PokemonEX",
+  "referenceImage": "pokemon-ex-reference.jpg",
+  "version": "1.0.0",
+  "calibratedAt": "2026-01-12T00:00:00.000Z",
+  "cardNameRegion": {
+    "x": 0.04,
+    "y": 0.03,
+    "width": 0.68,
+    "height": 0.16
+  },
+  "hpRegion": {
+    "x": 0.73,
+    "y": 0.03,
+    "width": 0.24,
+    "height": 0.12
+  },
+  "setCodeRegion": {
+    "x": 0.32,
+    "y": 0.86,
+    "width": 0.35,
+    "height": 0.12
+  },
+  "collectorNumberRegion": {
+    "x": 0.67,
+    "y": 0.86,
+    "width": 0.30,
+    "height": 0.12
+  }
+}

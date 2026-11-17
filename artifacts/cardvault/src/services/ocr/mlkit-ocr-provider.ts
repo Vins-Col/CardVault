@@ -3,10 +3,10 @@ import type { OcrProvider, OcrResult } from "./ocr-types";
 import { parseOcrText } from "./ocr-parser";
 
 export class MlKitOcrProvider implements OcrProvider {
-  async extractText(imageUri: string): Promise<OcrResult> {
+  async extractText(imageUri: string, width?: number, height?: number): Promise<OcrResult> {
     try {
       const recognitionResult = await recognizeText(imageUri);
-      return parseOcrText(recognitionResult);
+      return parseOcrText(recognitionResult, width, height);
     } catch (error) {
       throw error instanceof Error
         ? error

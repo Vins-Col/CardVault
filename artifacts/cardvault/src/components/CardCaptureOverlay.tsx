@@ -18,13 +18,13 @@ export default function CardCaptureOverlay({
   return (
     <View style={styles.container} pointerEvents="none">
       <View
-        style={[styles.backdrop, { backgroundColor: "rgba(0, 0, 0, 0.65)" }]}
+        style={[styles.backdrop, { backgroundColor: "rgba(0, 0, 0, 0.3)" }]}
       />
       <View style={styles.centerContainer}>
         <View
           style={[
             styles.cardFrame,
-            { borderColor: colors.primary, backgroundColor: "transparent" },
+            { borderColor: "rgba(255, 255, 255, 0.4)", backgroundColor: "transparent" },
           ]}
         >
           <View
@@ -40,21 +40,28 @@ export default function CardCaptureOverlay({
             style={[styles.cornerBottomRight, { borderColor: colors.primary }]}
           />
         </View>
-        <Text
+        <View
           style={[
-            styles.helperText,
-            { color: "#FFFFFF", fontFamily: typography.fonts.semiBold },
+            styles.helperTextContainer,
+            { backgroundColor: "rgba(0, 0, 0, 0.65)" },
           ]}
         >
-          Align the card inside the frame
-        </Text>
+          <Text
+            style={[
+              styles.helperText,
+              { color: "#FFFFFF", fontFamily: typography.fonts.semiBold },
+            ]}
+          >
+            Align the card inside the frame
+          </Text>
+        </View>
       </View>
     </View>
   );
 }
 
 const { width } = Dimensions.get("window");
-const frameWidth = Math.min(width * 0.75, 280);
+const frameWidth = Math.min(width * 0.78, 290);
 const frameHeight = frameWidth * (3.5 / 2.5); // Pokémon card aspect ratio 3.5:2.5 height:width
 
 const styles = StyleSheet.create({
@@ -74,56 +81,61 @@ const styles = StyleSheet.create({
   cardFrame: {
     width: frameWidth,
     height: frameHeight,
-    borderWidth: 2,
-    borderRadius: 16,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderRadius: 18,
     position: "relative",
   },
+  helperTextContainer: {
+    marginTop: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    overflow: "hidden",
+  },
   helperText: {
-    marginTop: 20,
-    fontSize: 16,
+    fontSize: 14,
     textAlign: "center",
-    textShadowColor: "rgba(0, 0, 0, 0.75)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    letterSpacing: 0.3,
   },
   cornerTopLeft: {
     position: "absolute",
     top: -2,
     left: -2,
-    width: 20,
-    height: 20,
+    width: 26,
+    height: 26,
     borderTopWidth: 4,
     borderLeftWidth: 4,
-    borderTopLeftRadius: 14,
+    borderTopLeftRadius: 16,
   },
   cornerTopRight: {
     position: "absolute",
     top: -2,
     right: -2,
-    width: 20,
-    height: 20,
+    width: 26,
+    height: 26,
     borderTopWidth: 4,
     borderRightWidth: 4,
-    borderTopRightRadius: 14,
+    borderTopRightRadius: 16,
   },
   cornerBottomLeft: {
     position: "absolute",
     bottom: -2,
     left: -2,
-    width: 20,
-    height: 20,
+    width: 26,
+    height: 26,
     borderBottomWidth: 4,
     borderLeftWidth: 4,
-    borderBottomLeftRadius: 14,
+    borderBottomLeftRadius: 16,
   },
   cornerBottomRight: {
     position: "absolute",
     bottom: -2,
     right: -2,
-    width: 20,
-    height: 20,
+    width: 26,
+    height: 26,
     borderBottomWidth: 4,
     borderRightWidth: 4,
-    borderBottomRightRadius: 14,
+    borderBottomRightRadius: 16,
   },
 });

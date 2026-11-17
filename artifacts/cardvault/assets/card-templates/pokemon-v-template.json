@@ -1,0 +1,32 @@
+{
+  "templateId": "pokemon-v-ref-v1",
+  "gameId": "pokemon",
+  "layoutName": "PokemonV",
+  "referenceImage": "pokemon-v-reference.jpg",
+  "version": "1.0.0",
+  "calibratedAt": "2026-01-12T00:00:00.000Z",
+  "cardNameRegion": {
+    "x": 0.05,
+    "y": 0.02,
+    "width": 0.65,
+    "height": 0.17
+  },
+  "hpRegion": {
+    "x": 0.72,
+    "y": 0.02,
+    "width": 0.25,
+    "height": 0.12
+  },
+  "setCodeRegion": {
+    "x": 0.30,
+    "y": 0.87,
+    "width": 0.38,
+    "height": 0.11
+  },
+  "collectorNumberRegion": {
+    "x": 0.68,
+    "y": 0.87,
+    "width": 0.29,
+    "height": 0.11
+  }
+}

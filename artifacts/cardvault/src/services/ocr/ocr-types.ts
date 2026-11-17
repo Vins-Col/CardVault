@@ -11,5 +11,5 @@ export interface OcrResult {
 export type OcrExtractionResult = OcrResult;
 
 export interface OcrProvider {
-  extractText(imageUri: string): Promise<OcrResult>;
+  extractText(imageUri: string, width?: number, height?: number): Promise<OcrResult>;
 }
